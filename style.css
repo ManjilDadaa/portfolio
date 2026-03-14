@@ -1165,6 +1165,24 @@ section.visible h2::after {
     opacity: 0.8;
 }
 
+.apk-download-btn {
+    display: inline-block;
+    margin: 0 1.5rem 1.5rem;
+    padding: 0.6rem 1.4rem;
+    background: linear-gradient(135deg, var(--success-color), var(--emerald-color));
+    color: white;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.apk-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
 #contact {
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
 }

@@ -16,7 +16,7 @@ form?.addEventListener('submit', async (event) => {
     }
 
     submitButton.disabled = true;
-    submitButton.textContent = 'Submitting…';
+    submitButton.textContent = 'Submitting...';
 
     try {
         const result = await window.supabaseService.saveDeletionRequest(email);

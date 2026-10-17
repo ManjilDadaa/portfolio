@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Request deletion of your StudentOS account and associated certificate data.">
     <meta name="author" content="Manjil Basnet">
-    <title>Delete StudentOS Account - Manjil Basnet</title>
+    <meta name="theme-color" content="#f5f8ff">
+    <title>Delete StudentOS Account | Manjil Basnet</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="studentos-support-page">
     <header>
         <div class="container">
             <div class="nav-container">
@@ -28,33 +29,67 @@
         </div>
     </header>
 
-    <main class="legal-page">
-        <article class="legal-card">
-            <p class="legal-eyebrow">StudentOS · Account controls</p>
-            <h1>Request StudentOS account deletion</h1>
-            <p>Use this page if you no longer have access to the StudentOS app or prefer to make your request on the web. A verified request covers your StudentOS account, certificate details, and certificate files associated with that account.</p>
+    <main class="studentos-page deletion-page">
+        <section class="support-hero deletion-hero" aria-labelledby="deletion-title">
+            <div class="support-breadcrumb"><a href="index.html">Portfolio</a><span aria-hidden="true">/</span><a href="studentos-privacy.html">StudentOS</a><span aria-hidden="true">/</span><span>Account deletion</span></div>
+            <p class="support-eyebrow"><span class="support-eyebrow-dot" aria-hidden="true"></span>Account controls</p>
+            <h1 id="deletion-title">Your data. Your decision.</h1>
+            <p class="support-hero-copy">Submit a request to delete your StudentOS account and the certificate information and files associated with it.</p>
+        </section>
 
-            <ol>
-                <li>Enter the email address used for your StudentOS account.</li>
-                <li>Submit the request. Manjil Basnet will verify the request using that account email.</li>
-                <li>After verification, we aim to complete deletion within 30 days and will contact you if more information is needed.</li>
-            </ol>
+        <section class="deletion-summary" aria-label="What to expect">
+            <div class="summary-item"><span class="summary-number">01</span><div><strong>Enter your account email</strong><p>Use the email address connected to StudentOS.</p></div></div>
+            <div class="summary-item"><span class="summary-number">02</span><div><strong>We verify the request</strong><p>The request is reviewed by the developer.</p></div></div>
+            <div class="summary-item"><span class="summary-number">03</span><div><strong>Deletion is processed</strong><p>Verified requests are targeted within 30 days.</p></div></div>
+        </section>
 
-            <form id="studentos-deletion-form" class="deletion-form">
-                <label for="account-email">Email address on your StudentOS account</label>
-                <input id="account-email" name="email" type="email" autocomplete="email" required maxlength="254">
+        <div class="deletion-layout">
+            <div class="deletion-details">
+                <section class="deletion-detail-block">
+                    <p class="policy-kicker">What deletion covers</p>
+                    <h2>One request for your StudentOS data</h2>
+                    <p>A verified request covers your StudentOS account, certificate details, and certificate files associated with that account. You can also delete individual certificates directly in the app.</p>
+                </section>
+                <section class="deletion-detail-block deletion-notice">
+                    <span class="notice-icon" aria-hidden="true">i</span>
+                    <div>
+                        <h3>What happens after you submit</h3>
+                        <p>This form records your email and confirmation in the StudentOS Supabase project for review. It does not automatically delete the account or send an email notification. We will verify the request using the account email and contact you if more information is needed.</p>
+                    </div>
+                </section>
+                <p class="deletion-privacy-link">For details about stored information and retention, read the <a href="studentos-privacy.html">StudentOS Privacy Policy <span aria-hidden="true">&rarr;</span></a></p>
+            </div>
 
-                <label class="checkbox-row" for="confirm-deletion">
-                    <input id="confirm-deletion" name="confirm" type="checkbox" required>
-                    <span>I am requesting deletion of my StudentOS account and its associated certificate data.</span>
-                </label>
+            <section class="deletion-form-card" aria-labelledby="request-form-title">
+                <div class="form-card-heading">
+                    <span class="form-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" aria-label="Account request">
+                            <path d="M12 3.5 19 6v5.2c0 4.5-2.9 7.7-7 9.3-4.1-1.6-7-4.8-7-9.3V6l7-2.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+                            <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </span>
+                    <div>
+                        <p class="form-card-kicker">Secure request</p>
+                        <h2 id="request-form-title">Request account deletion</h2>
+                    </div>
+                </div>
+                <p class="form-card-intro">Enter the email you use to sign in to StudentOS. Please do not enter your password or attach certificate documents.</p>
 
-                <button id="deletion-submit" type="submit">Submit deletion request</button>
-                <p id="deletion-status" class="form-status" role="status" aria-live="polite"></p>
-            </form>
+                <form id="studentos-deletion-form" class="deletion-form">
+                    <label for="account-email">StudentOS account email</label>
+                    <input id="account-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="254">
 
-            <p class="legal-form-note">Your account email and confirmation are stored in the StudentOS Supabase project for the developer to review. The form does not delete your account automatically or send an email notification. Please do not enter your password or attach certificate documents. Read the <a href="studentos-privacy.html">StudentOS Privacy Policy</a> for details.</p>
-        </article>
+                    <label class="checkbox-row" for="confirm-deletion">
+                        <input id="confirm-deletion" name="confirm" type="checkbox" required>
+                        <span>I am requesting deletion of my StudentOS account and its associated certificate data.</span>
+                    </label>
+
+                    <button id="deletion-submit" type="submit">Submit deletion request <span aria-hidden="true">&rarr;</span></button>
+                    <p id="deletion-status" class="form-status" role="status" aria-live="polite"></p>
+                </form>
+                <p class="form-card-footnote"><span aria-hidden="true">&#128274;</span> Your information is used to review this request.</p>
+            </section>
+        </div>
     </main>
 
     <footer>
@@ -62,7 +97,7 @@
             <p>&copy; 2026 Manjil Basnet. All rights reserved.</p>
             <p class="legal-footer-links">
                 <a href="studentos-privacy.html">StudentOS privacy</a>
-                <a href="studentos-delete-account.html">Delete StudentOS account</a>
+                <a href="studentos-delete-account.html" aria-current="page">Delete StudentOS account</a>
             </p>
         </div>
     </footer>

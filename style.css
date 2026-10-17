@@ -1696,3 +1696,145 @@ footer {
         padding: 1rem 0.5rem;
     }
 }
+
+/* StudentOS legal and account support pages */
+.legal-page {
+    width: min(900px, calc(100% - 2rem));
+    margin: 120px auto 3rem;
+    min-height: calc(100vh - 230px);
+}
+
+.legal-card {
+    padding: clamp(1.25rem, 4vw, 3rem);
+    color: var(--text-color);
+    background: var(--list-bg-color);
+    border: 1px solid rgba(59, 130, 246, 0.16);
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+}
+
+.legal-card .legal-eyebrow {
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.legal-card h1 {
+    margin-bottom: 0.5rem;
+    font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.legal-card h2 {
+    display: block;
+    margin: 2rem 0 0.65rem;
+    font-size: 1.35rem;
+}
+
+.legal-card h2::after {
+    content: none;
+}
+
+.legal-card p,
+.legal-card li {
+    line-height: 1.75;
+}
+
+.legal-card p + p {
+    margin-top: 0.8rem;
+}
+
+.legal-card ul,
+.legal-card ol {
+    padding-left: 1.4rem;
+    margin: 0.75rem 0 1rem;
+}
+
+.legal-card li + li {
+    margin-top: 0.55rem;
+}
+
+.legal-card a,
+.legal-footer-links a {
+    color: var(--primary-color);
+    font-weight: 600;
+    text-underline-offset: 0.2em;
+}
+
+.legal-updated {
+    margin-bottom: 1.5rem;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.deletion-form {
+    margin-top: 1.5rem;
+    padding: clamp(1rem, 3vw, 1.5rem);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 16px;
+    background: var(--bg-color);
+}
+
+.deletion-form label:not(.checkbox-row) {
+    font-weight: 600;
+}
+
+.deletion-form .checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    line-height: 1.5;
+}
+
+.deletion-form input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0.2rem 0 0;
+    padding: 0;
+    accent-color: var(--primary-color);
+}
+
+.deletion-form button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.form-status {
+    min-height: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.form-status.success {
+    color: #047857;
+}
+
+.form-status.error {
+    color: #b91c1c;
+}
+
+.legal-form-note {
+    margin-top: 1.25rem !important;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.legal-footer-links {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .legal-page {
+        margin-top: 95px;
+    }
+
+    .legal-card h2 {
+        font-size: 1.2rem;
+    }
+}

@@ -151,16 +151,7 @@ class PortfolioManager {
 
     sanitizeInput(input) {
         if (typeof input !== 'string') return '';
-        return input.replace(/[<>\"'&]/g, (match) => {
-            const escapeMap = {
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#x27;',
-                '&': '&amp;'
-            };
-            return escapeMap[match];
-        }).trim().substring(0, 1000);
+        return input.trim().substring(0, 5000);
     }
 
     showNotification(message, type = 'info') {
@@ -196,8 +187,8 @@ class PortfolioManager {
             
             const formData = new FormData(form);
             const contactData = {
-                name: this.sanitizeInput(formData.get('name')),
-                email: this.sanitizeInput(formData.get('email')),
+                name: this.sanitizeInput(formData.get('name')).substring(0, 100),
+                email: this.sanitizeInput(formData.get('email')).substring(0, 254),
                 message: this.sanitizeInput(formData.get('message'))
             };
 
@@ -212,10 +203,16 @@ class PortfolioManager {
                 return;
             }
 
-            // Save contact form to Firebase if available
-            if (window.firebaseService) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton?.textContent;
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Sending...';
+            }
+
+            if (window.supabaseService) {
                 try {
-                    const result = await window.firebaseService.saveContact(contactData);
+                    const result = await window.supabaseService.saveContact(contactData);
                     if (result.success) {
                         this.showNotification('Thank you for your message! I will get back to you soon.', 'success');
                         form.reset();
@@ -228,6 +225,11 @@ class PortfolioManager {
                 }
             } else {
                 this.showNotification('Service unavailable. Please try again later.', 'error');
+            }
+
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText || 'Send Message';
             }
         });
     }

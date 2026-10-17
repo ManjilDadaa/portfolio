@@ -154,25 +154,43 @@ class QuizManager {
         this.showElement('progress-card');
     }
 
-    async loadUserProgress() {
-        if (!window.firebaseService) {
-            console.log('Firebase not initialized yet');
-            return;
+    async progressStorageKey() {
+        if (!window.crypto?.subtle) {
+            throw new Error('Secure local storage is unavailable in this browser.');
         }
 
-        try {
-            const result = await window.firebaseService.getUserProgress(this.currentUser);
-            
-            if (!result.success) {
-                this.showNotification('Failed to load progress', 'error');
-                return;
-            }
+        const identity = new TextEncoder().encode(this.currentUser);
+        const digest = await window.crypto.subtle.digest('SHA-256', identity);
+        const fingerprint = Array.from(new Uint8Array(digest), byte =>
+            byte.toString(16).padStart(2, '0')
+        ).join('');
+        return `portfolio.python-quiz.${fingerprint}`;
+    }
 
+    async readLocalProgress() {
+        const value = localStorage.getItem(await this.progressStorageKey());
+        if (!value) return {};
+
+        const progress = JSON.parse(value);
+        return progress && typeof progress === 'object' && !Array.isArray(progress)
+            ? progress
+            : {};
+    }
+
+    async writeLocalProgress(progress) {
+        localStorage.setItem(
+            await this.progressStorageKey(),
+            JSON.stringify(progress)
+        );
+    }
+
+    async loadUserProgress() {
+        try {
+            this.quizState = await this.readLocalProgress();
             const progressList = document.getElementById('progress-list');
             if (!progressList) return;
 
             progressList.innerHTML = '';
-            this.quizState = result.data;
 
             Object.keys(quizData).forEach(topic => {
                 const progress = this.quizState[topic];
@@ -182,7 +200,7 @@ class QuizManager {
 
         } catch (error) {
             console.error("Error loading progress:", error);
-            this.showNotification('Error loading progress', 'error');
+            this.showNotification('Could not load progress saved in this browser', 'error');
         }
     }
 
@@ -434,7 +452,7 @@ class QuizManager {
         // Generate personalized feedback
         this.generateFeedback(score, correct, questions.length, easyCorrect, mediumCorrect, hardCorrect, easyTotal, mediumTotal, hardTotal);
 
-        // Save progress to Firebase
+        // Save progress in this browser
         await this.saveQuizProgress(topic, correct, questions.length, score);
     }
 
@@ -620,51 +638,28 @@ class QuizManager {
     }
 
     async saveQuizProgress(topic, correct, total, score) {
-        if (!window.firebaseService) {
-            console.log('Firebase not available, progress not saved');
-            return;
-        }
-
         try {
             const existingAttempts = this.quizState[topic] ? this.quizState[topic].attempts : 0;
             
             const timeSpent = Object.values(this.userAnswers).reduce((total, answer) => total + (answer.timeSpent || 0), 0);
             const avgTimePerQuestion = total > 0 ? timeSpent / total : 0;
-            
-            const progressData = {
-                username: this.currentUser,
-                topic: topic,
-                correct: correct,
-                total: total,
-                score: score, 
+
+            this.quizState[topic] = {
+                correct,
+                total,
+                score,
                 attempts: existingAttempts + 1,
-                answers: this.userAnswers,
                 totalTimeSpent: timeSpent,
                 averageTimePerQuestion: avgTimePerQuestion
             };
+            await this.writeLocalProgress(this.quizState);
 
-            const result = await window.firebaseService.saveQuizProgress(progressData);
-            
-            if (result.success) {
-                // Update local quiz state immediately
-                this.quizState[topic] = {
-                    correct: correct,
-                    total: total,
-                    score: score,
-                    attempts: existingAttempts + 1
-                };
-                
-                // Update progress display if it's currently shown
-                this.updateProgressDisplay();
-                
-                this.showNotification('Progress saved successfully!', 'success');
-            } else {
-                this.showNotification('Failed to save progress', 'error');
-            }
+            this.updateProgressDisplay();
+            this.showNotification('Progress saved in this browser!', 'success');
 
         } catch (error) {
             console.error("Error saving progress:", error);
-            this.showNotification('Error saving progress', 'error');
+            this.showNotification('Could not save progress in this browser', 'error');
         }
     }
 

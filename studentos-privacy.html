@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Privacy policy for StudentOS, the private certificate vault by Manjil Basnet.">
+    <meta name="author" content="Manjil Basnet">
+    <title>StudentOS Privacy Policy - Manjil Basnet</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="nav-container">
+                <nav aria-label="Main navigation">
+                    <a class="nav-logo" href="index.html" aria-label="Manjil Basnet home">MB</a>
+                    <button class="nav-toggle" type="button" aria-label="Toggle navigation">
+                        <span></span>
+                    </button>
+                    <ul class="nav-menu">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="studentos-privacy.html" aria-current="page">StudentOS Privacy</a></li>
+                        <li><a href="studentos-delete-account.html">Delete Account</a></li>
+                        <li><a href="index.html#contact">Contact</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="legal-page">
+        <article class="legal-card">
+            <p class="legal-eyebrow">StudentOS · Privacy</p>
+            <h1>StudentOS Privacy Policy</h1>
+            <p class="legal-updated">Effective date: October 17, 2026</p>
+
+            <p>StudentOS is a private certificate vault operated by Manjil Basnet. This policy explains how the StudentOS app handles information when you create an account, save certificates, or share a certificate link. It also describes the information collected when you submit a StudentOS account-deletion request through this website.</p>
+
+            <h2>Information StudentOS handles</h2>
+            <ul>
+                <li><strong>Account information:</strong> your email address and Supabase account identifier. Supabase Auth processes your sign-in credentials to authenticate your account.</li>
+                <li><strong>Certificate information:</strong> details you enter, such as title, category, issuer, issue and expiry dates, and notes.</li>
+                <li><strong>Certificate files:</strong> the PDF or image you choose to upload, along with its file name, file type, and size.</li>
+                <li><strong>Service records:</strong> identifiers and timestamps needed to associate your certificates with your account and operate the vault.</li>
+            </ul>
+
+            <h2>How information is used and stored</h2>
+            <p>StudentOS uses this information to create and secure your account, save and display your certificate records and files, and provide the sharing feature. The app sends account and vault information to Supabase, which provides authentication, database, and file-storage services for StudentOS. Files are uploaded over HTTPS and new certificate files are stored in a private bucket with account-scoped access policies.</p>
+            <p>StudentOS does not sell your personal information or use it for advertising. The app does not request access to your entire photo library or contacts; you choose individual files through the device file picker.</p>
+
+            <h2>Sharing certificate files</h2>
+            <p>When you choose to share a new certificate, StudentOS creates a signed link that works for one hour. Anyone who receives that link may be able to open the file until it expires, so share it only with people you trust. Older prototype certificates may still point to legacy public file links. Re-upload an older certificate into the private vault before sharing it; an existing public link may remain accessible until its original file is removed.</p>
+
+            <h2>Service providers and recipients</h2>
+            <p>Supabase processes account and certificate information to provide StudentOS authentication, database, and storage services. If you create a signed share link, the person you give it to can access that file for the link’s one-hour lifetime.</p>
+            <p>If you submit a deletion request on this website, your StudentOS account email and confirmation are stored in the StudentOS Supabase project so Manjil Basnet can review and handle the request. The request form does not send an email notification or delete your account automatically. Do not include your password or certificate files in a request.</p>
+
+            <h2>Retention and deletion</h2>
+            <p>Your account information and certificates are retained while your account is active. You can delete individual certificates from the app. To request deletion of your account and associated certificate data, use the <a href="studentos-delete-account.html">StudentOS account deletion page</a>. We will verify the request using the email associated with the account and aim to complete verified requests within 30 days. Account deletion includes the account, certificate records, and files that can be associated with it. Limited copies may remain in service-provider backups until those backups expire under the provider’s retention schedule.</p>
+            <p>We retain a deletion-request record only as long as needed to verify and process the request and document its completion. We may retain information where required by law or where it is necessary to address security or fraud issues, and will explain any such retention when applicable.</p>
+
+            <h2>Security</h2>
+            <p>StudentOS uses HTTPS for network communication and Supabase authentication and access policies to restrict access to vault data. No online service can guarantee absolute security, and StudentOS files are not end-to-end encrypted.</p>
+
+            <h2>Contact</h2>
+            <p>For privacy questions, use the <a href="index.html#contact">contact form</a> on Manjil Basnet’s portfolio website. This policy applies to StudentOS and its account-deletion request form; other portfolio features may handle information separately.</p>
+        </article>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Manjil Basnet. All rights reserved.</p>
+            <p class="legal-footer-links">
+                <a href="studentos-privacy.html">StudentOS privacy</a>
+                <a href="studentos-delete-account.html">Delete StudentOS account</a>
+            </p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -93,7 +93,7 @@
                     <li>GitHub</li>
                     <li>APIs</li>
                     <li>Agile Methodologies</li>
-                    <li>Firebase</li>
+                    <li>Supabase</li>
                     <li>SQL</li>
                     <li>Artificial Intelligence</li>
                     <li>Machine Learning</li>
@@ -131,9 +131,9 @@
             <div class="container slide-in-right">
                 <h2>Contact</h2>
                 <form id="contact-form">
-                    <input type="text" name="name" placeholder="Your Name" required>
-                    <input type="email" name="email" placeholder="Your Email" required>
-                    <textarea name="message" placeholder="Your Message" required></textarea>
+                    <input type="text" name="name" placeholder="Your Name" maxlength="100" required>
+                    <input type="email" name="email" placeholder="Your Email" maxlength="254" required>
+                    <textarea name="message" placeholder="Your Message" maxlength="5000" required></textarea>
                     <button type="submit">Send Message</button>
                 </form>
             </div>
@@ -143,10 +143,15 @@
     <footer>
         <div class="container">
             <p>&copy; 2025 Manjil Basnet. All rights reserved.</p>
+            <p class="legal-footer-links">
+                <a href="studentos-privacy.html">StudentOS privacy</a>
+                <a href="studentos-delete-account.html">Delete StudentOS account</a>
+            </p>
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="script.js"></script>
-    <script type="module" src="firebase-config.js"></script>
 </body>
 </html>

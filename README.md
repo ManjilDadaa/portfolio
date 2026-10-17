@@ -8,7 +8,9 @@ A modern, responsive portfolio website with interactive Python quiz functionalit
 - **Interactive Quiz System**: Python learning quizzes with progress tracking
 - **Secure Implementation**: Input sanitization and XSS protection
 - **Performance Optimized**: Lazy loading and efficient DOM manipulation
-- **Firebase Integration**: Real-time data storage for quiz progress and contacts
+- **Supabase Integration**: Separate tables for contact messages and StudentOS deletion requests
+- **Private quiz progress**: Progress is saved locally in the visitor's browser
+- **StudentOS support pages**: Public privacy policy and account-deletion request page for the certificate vault app
 
 ## File Structure
 
@@ -20,26 +22,46 @@ portfolio/
 ├── script.js           # Main portfolio functionality
 ├── quiz.js             # Quiz functionality
 ├── quiz-data.js        # Quiz questions and data
-├── firebase-config.js  # Secure Firebase configuration
+├── supabase-config.js  # Supabase publishable-key client for form submissions
 ├── project1.html       # Project detail page
+├── studentos-privacy.html        # StudentOS privacy policy
+├── studentos-delete-account.html # Public account-deletion request page
+├── studentos-delete-account.js   # Submits requests to Supabase
 └── assets/             # Images and media files
 ```
+
+Contact messages are stored in the Supabase `contact_messages` table. StudentOS account-deletion requests are stored separately in `account_deletion_requests`. Review them in the Supabase Dashboard under **Table Editor**. The forms do not send email notifications or delete accounts automatically; verify requests and fulfill them manually, including removing the user's certificate records and files.
 
 ## Security Features
 
 - **Input Sanitization**: All user inputs are sanitized to prevent XSS attacks
-- **Firebase Security**: Secure Firebase operations with error handling
-- **Environment Variables**: Configuration separated from code
+- **Supabase Security**: Row-level security and insert-only grants protect submitted requests
+- **Client Key Safety**: The website uses only a Supabase publishable key; never expose a secret/service-role key
 - **Content Security**: HTML entities encoding for safe content display
 
-## Setup Instructions
+## Run Locally
 
-1. **Clone the repository**
-2. **Configure Firebase**:
-   - Copy `.env.example` to `.env`
-   - Fill in your Firebase configuration values
-   - Update `firebase-config.js` with environment variables
-3. **Deploy to web server**
+This is a static website; it has no build step or npm dependencies. From the
+repository root, start a local web server:
+
+```powershell
+py -m http.server 8000
+```
+
+If `py` is unavailable, use `python -m http.server 8000`. Then open
+<http://localhost:8000> in your browser. Stop the server with `Ctrl+C`.
+
+Alternatively, open the repository in VS Code and use the Live Server
+extension; the workspace is configured to use port `5501`.
+
+The Supabase client configuration is in `supabase-config.js`. It currently uses
+the same main-project URL and publishable key as the StudentOS local
+configuration. For a test branch, replace both values with that branch's URL
+and publishable key. Apply
+`supabase/migrations/202610170001_website_requests.sql` from the StudentOS
+repository to that Supabase project before relying on the forms. The static
+pages can be viewed without a network connection; submissions require internet
+access and the migration's grants and row-level security policies.
 
 ## Performance Optimizations
 
@@ -59,19 +81,12 @@ portfolio/
 
 ⚠️ **Important Security Considerations:**
 
-1. **Never commit Firebase keys to version control**
-2. **Use environment variables for sensitive data**
-3. **Implement proper Firebase security rules**
+1. **Never put a Supabase secret or service-role key in browser code**
+2. **A publishable key is public; use row-level security to control access**
+3. **Keep the Supabase request tables write-only for public clients**
 4. **Regularly update dependencies**
 5. **Use HTTPS in production**
 
-## Development
-
-For local development:
-1. Use a local web server (not file:// protocol)
-2. Configure Firebase for localhost
-3. Test all security features
-
 ## License
 
-© 2025 Manjil Basnet. All rights reserved.
+© 2026 Manjil Basnet. All rights reserved.

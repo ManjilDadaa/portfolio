@@ -217,14 +217,21 @@ class PortfolioManager {
                         this.showNotification('Thank you for your message! I will get back to you soon.', 'success');
                         form.reset();
                     } else {
-                        this.showNotification('Failed to send message. Please try again.', 'error');
+                        console.error('Contact form submission was rejected:', result.error);
+                        if (result.error?.code === 'PGRST205' || result.error?.status === 404) {
+                            this.showNotification('The contact form is not configured yet. Please try again later.', 'error');
+                        } else if (result.error?.status === 401 || result.error?.status === 403) {
+                            this.showNotification('The contact form needs a database permission update. Please try again later.', 'error');
+                        } else {
+                            this.showNotification('Could not send your message. Check your connection and try again.', 'error');
+                        }
                     }
                 } catch (error) {
                     console.error("Error saving contact form:", error);
-                    this.showNotification('Error sending message. Please try again.', 'error');
+                    this.showNotification('Could not connect to the contact service. Check your connection and try again.', 'error');
                 }
             } else {
-                this.showNotification('Service unavailable. Please try again later.', 'error');
+                this.showNotification('The contact service did not load. Refresh the page and try again.', 'error');
             }
 
             if (submitButton) {

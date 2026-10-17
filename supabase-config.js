@@ -1,28 +1,37 @@
-// The browser may use a Supabase publishable key. Row-level security and
-// column-level grants in the StudentOS migration limit this client to inserts.
+// The browser may use a Supabase publishable key. Database grants and RLS
+// policies limit this client to inserting contact and deletion requests.
 (() => {
-    const supabaseLibrary = window.supabase;
-    if (!supabaseLibrary?.createClient) {
-        console.error('Supabase JavaScript client did not load.');
-        window.supabaseService = null;
-        return;
-    }
-
-    const client = supabaseLibrary.createClient(
-        'https://pgkehdchxfbxsswyqhac.supabase.co',
-        'sb_publishable_QRXIBVha9PpuBOON52GdCw_E3tUrTuP',
-        {
-            auth: {
-                autoRefreshToken: false,
-                detectSessionInUrl: false,
-                persistSession: false
-            }
-        }
-    );
-
+    const supabaseUrl = 'https://pgkehdchxfbxsswyqhac.supabase.co';
+    const publishableKey = 'sb_publishable_QRXIBVha9PpuBOON52GdCw_E3tUrTuP';
     const cleanText = (value, maxLength) =>
         typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    async function insertRow(table, row) {
+        const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+            method: 'POST',
+            headers: {
+                apikey: publishableKey,
+                'Content-Type': 'application/json',
+                Prefer: 'return=minimal'
+            },
+            body: JSON.stringify(row)
+        });
+
+        if (response.ok) return;
+
+        let details = {};
+        try {
+            details = await response.json();
+        } catch {
+            // Keep the HTTP status as the useful error when the body is empty.
+        }
+
+        const error = new Error(details.message || `Supabase returned HTTP ${response.status}.`);
+        error.status = response.status;
+        error.code = details.code;
+        throw error;
+    }
 
     window.supabaseService = Object.freeze({
         async saveContact({ name, email, message } = {}) {
@@ -36,12 +45,13 @@
                 return { success: false, error: new Error('Please check the contact form fields.') };
             }
 
-            const { error } = await client.from('contact_messages').insert(submission);
-            if (error) {
+            try {
+                await insertRow('contact_messages', submission);
+                return { success: true };
+            } catch (error) {
                 console.error('Could not save contact message:', error);
                 return { success: false, error };
             }
-            return { success: true };
         },
 
         async saveDeletionRequest(accountEmail) {
@@ -50,15 +60,16 @@
                 return { success: false, error: new Error('Please enter a valid account email.') };
             }
 
-            const { error } = await client.from('account_deletion_requests').insert({
-                account_email: email,
-                confirmation: true
-            });
-            if (error) {
+            try {
+                await insertRow('account_deletion_requests', {
+                    account_email: email,
+                    confirmation: true
+                });
+                return { success: true };
+            } catch (error) {
                 console.error('Could not save account deletion request:', error);
                 return { success: false, error };
             }
-            return { success: true };
         }
     });
 })();

@@ -1,0 +1,52 @@
+.gharbato-support-page {
+    --primary-color: #2b193d;
+    --support-accent: #2b193d;
+    --support-accent-soft: #f1ecf5;
+}
+
+[data-theme="dark"] .gharbato-support-page {
+    --primary-color: #dbc9e8;
+    --support-accent: #dbc9e8;
+    --support-accent-soft: rgba(219, 201, 232, 0.13);
+}
+
+.gharbato-support-page .support-brand-mark {
+    background: #2b193d;
+}
+
+[data-theme="dark"] .gharbato-support-page .support-brand-mark {
+    background: #6d4a83;
+}
+
+.gharbato-support-page .support-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.8rem;
+    margin-top: 0.75rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--support-accent);
+    border-radius: 10px;
+    background: var(--support-accent);
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: transform 150ms ease, opacity 150ms ease;
+}
+
+.gharbato-support-page .support-action:hover,
+.gharbato-support-page .support-action:focus-visible {
+    opacity: 0.88;
+    transform: translateY(-1px);
+}
+
+.gharbato-support-page .support-note {
+    margin-top: 1.2rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--support-border);
+    border-radius: 12px;
+    background: var(--support-accent-soft);
+    color: var(--text-color);
+    line-height: 1.7;
+}

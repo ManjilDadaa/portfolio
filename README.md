@@ -11,6 +11,7 @@ A modern, responsive portfolio website with interactive Python quiz functionalit
 - **Supabase Integration**: Separate tables for contact messages and StudentOS deletion requests
 - **Private quiz progress**: Progress is saved locally in the visitor's browser
 - **StudentOS support pages**: Public privacy policy and account-deletion request page for the certificate vault app
+- **GharBato support pages**: Public privacy policy and account-deletion request page for the property marketplace app
 
 ## File Structure
 
@@ -27,6 +28,9 @@ portfolio/
 ├── studentos-privacy.html        # StudentOS privacy policy
 ├── studentos-delete-account.html # Public account-deletion request page
 ├── studentos-delete-account.js   # Submits requests to Supabase
+├── gharbato-privacy.html         # GharBato privacy policy
+├── gharbato-delete-account.html  # GharBato account-deletion request page
+├── gharbato-support.css          # GharBato support-page theme
 └── assets/             # Images and media files
 ```
 

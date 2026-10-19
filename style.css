@@ -1275,6 +1275,41 @@ footer {
     backdrop-filter: blur(10px);
 }
 
+.legal-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+}
+
+.legal-footer-links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0.55rem 1rem;
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    border-radius: 999px;
+    background-color: var(--list-bg-color);
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.legal-footer-links a:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.legal-footer-links a:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 3px;
+}
+
 /* Utility Classes */
 .hidden {
     display: none !important;

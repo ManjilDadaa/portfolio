@@ -222,6 +222,30 @@ section.visible h2::after {
     padding-right: 2rem;
 }
 
+.gharbato-home-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1.25rem;
+    padding: 0.8rem 1.25rem;
+    border-radius: 12px;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.gharbato-home-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+}
+
+.gharbato-home-cta:focus-visible {
+    outline: 3px solid var(--text-color);
+    outline-offset: 3px;
+}
+
 .profile-container {
     flex: 1;
     text-align: center;

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Private GharBato administration console.">
+    <title>GharBato Admin</title>
+    <link rel="stylesheet" href="gharbato-admin.css?v=20261026-5">
+</head>
+<body>
+    <div id="login-view" class="auth-screen">
+        <div class="auth-card">
+            <a class="auth-back" href="index.html">&larr; Back to portfolio</a>
+            <div class="auth-brand">
+                <span class="brand-mark">GB</span>
+                <div>
+                    <strong>GharBato</strong>
+                    <span>Admin console</span>
+                </div>
+            </div>
+            <h1>Sign in</h1>
+            <p class="muted">Administrator access only. Sign in with the dedicated GharBato admin account.</p>
+            <form id="login-form" novalidate>
+                <label for="login-email">Email</label>
+                <input id="login-email" name="email" type="email" autocomplete="username" spellcheck="false" required>
+                <label for="login-password">Password</label>
+                <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+                <p id="login-error" class="form-error" role="alert" hidden></p>
+                <button type="submit" class="btn btn-primary btn-block" id="login-submit">Sign in</button>
+            </form>
+            <p class="auth-note">The session stays in this tab and is cleared when you sign out.</p>
+        </div>
+    </div>
+
+    <div id="admin-view" hidden>
+        <header class="topbar">
+            <div class="topbar-inner">
+                <div class="topbar-brand">
+                    <span class="brand-mark">GB</span>
+                    <div>
+                        <strong>GharBato</strong>
+                        <span>Admin</span>
+                    </div>
+                </div>
+                <div class="topbar-actions">
+                    <span id="account-email" class="account-email"></span>
+                    <button type="button" class="btn btn-ghost" data-action="refresh">Refresh</button>
+                    <button type="button" class="btn btn-ghost" data-action="sign-out">Sign out</button>
+                </div>
+            </div>
+            <nav class="tabs" aria-label="Admin sections">
+                <button type="button" class="tab is-active" data-action="nav" data-view="overview">Overview</button>
+                <button type="button" class="tab" data-action="nav" data-view="listings">Listings</button>
+                <button type="button" class="tab" data-action="nav" data-view="reports">Reports</button>
+                <button type="button" class="tab" data-action="nav" data-view="users">Users</button>
+                <button type="button" class="tab" data-action="nav" data-view="kyc">KYC</button>
+                <button type="button" class="tab" data-action="nav" data-view="support">Support</button>
+                <button type="button" class="tab" data-action="nav" data-view="search">Search</button>
+                <button type="button" class="tab" data-action="nav" data-view="delete">Deletion</button>
+            </nav>
+        </header>
+
+        <main class="view" id="view-root"></main>
+
+        <footer class="admin-footer">
+            GharBato admin &middot; <a href="index.html">Portfolio</a> &middot;
+            <a href="gharbato-privacy.html">Privacy</a>
+        </footer>
+
+        <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+        <div id="modal-root"></div>
+    </div>
+
+    <script src="gharbato-admin-config.js?v=20261026-5"></script>
+    <script src="gharbato-admin.js?v=20261026-5"></script>
+</body>
+</html>

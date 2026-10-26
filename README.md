@@ -31,8 +31,23 @@ portfolio/
 ├── gharbato-privacy.html         # GharBato privacy policy
 ├── gharbato-delete-account.html  # GharBato account-deletion request page
 ├── gharbato-support.css          # GharBato support-page theme
+├── gharbato-admin.html           # GharBato web admin console
+├── gharbato-admin.css            # Admin console styling
+├── gharbato-admin.js             # Admin console logic (Firebase Auth + Realtime Database REST)
+├── gharbato-admin-config.js      # Public Firebase web config for the admin console
 └── assets/             # Images and media files
 ```
+
+The GharBato admin console signs in with Firebase email/password using a
+dedicated admin account. The console checks that account's UID in
+`gharbato-admin-config.js`, and the database rules enforce the same UID, so no
+custom claim is involved. It reads and writes the Realtime Database directly
+over the REST API, so the database rules remain the security boundary. The
+Firebase web API key in `gharbato-admin-config.js` is intentionally public; if
+the existing key is restricted to the Android app, replace it with a Web app key
+for the same project. To rotate the admin account, create a new Firebase Auth
+user, replace the UID in the config and in `database.rules.json`, then redeploy
+the rules.
 
 Contact messages are stored in the Supabase `contact_messages` table. StudentOS account-deletion requests are stored separately in `account_deletion_requests`. Review them in the Supabase Dashboard under **Table Editor**. The forms do not send email notifications or delete accounts automatically; verify requests and fulfill them manually, including removing the user's certificate records and files.
 

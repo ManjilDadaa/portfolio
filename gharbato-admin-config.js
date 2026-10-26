@@ -9,7 +9,7 @@
  * project in Firebase Console and replace `apiKey` with that app's key.
  */
 window.GHARBATO_ADMIN_CONFIG = {
-    apiKey: "AIzaSyBbLotI631680JpjYQodXuj62puEhheVJ4",
+    apiKey: "AIzaSyBPRxD0U6FPbHYJgJFJXwSFxozZi6ZDX_E",
     databaseURL: "https://gharbatodb-default-rtdb.firebaseio.com",
     projectId: "gharbatodb",
     adminUid: "0JUEhcfPheQkBhlkoTLlfTm8uwE3"

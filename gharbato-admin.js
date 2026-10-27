@@ -25,6 +25,10 @@
         presence: {},
         supportUid: null,
         pollTimer: null,
+        kycObjectUrls: [],
+        kycImageGeneration: 0,
+        kycAbortController: null,
+        sessionGeneration: 0,
         ui: {
             listingStatus: 'PENDING',
             listingQuery: '',
@@ -353,6 +357,7 @@
     }
 
     async function forceRefreshToken() {
+        var generation = state.sessionGeneration;
         var current = readSession() || state.session;
         if (!current || !current.refreshToken) {
             throw authError('The session expired. Sign in again.');
@@ -371,6 +376,9 @@
             throw new Error('Network error. Check your connection.');
         }
         var data = await response.json().catch(function () { return {}; });
+        if (!state.session || generation !== state.sessionGeneration) {
+            throw authError('The session ended. Sign in again.');
+        }
         if (!response.ok) {
             clearSession();
             state.session = null;
@@ -460,6 +468,7 @@
     }
 
     async function loadCore() {
+        var generation = state.sessionGeneration;
         var results = await Promise.all([
             dbRequest('Property'),
             dbRequest('Users'),
@@ -468,6 +477,7 @@
             dbRequest('KycSubmissions'),
             dbRequest('DeletionHistory')
         ]);
+        if (!state.session || generation !== state.sessionGeneration) return;
         var rawProperties = mapValues(results[0]);
         state.properties = {};
         Object.keys(rawProperties).forEach(function (key) {
@@ -481,17 +491,22 @@
     }
 
     async function loadSupport() {
-        state.support = mapValues(await dbRequest('support_messages'));
+        var generation = state.sessionGeneration;
+        var support = mapValues(await dbRequest('support_messages'));
+        if (state.session && generation === state.sessionGeneration) state.support = support;
     }
 
     async function fetchThread(uid, withPresence) {
+        var generation = state.sessionGeneration;
         var thread = mapValues(await dbRequest('support_messages/' + enc(uid)));
+        if (!state.session || generation !== state.sessionGeneration) return {};
         state.support[uid] = thread;
         if (withPresence) {
             try {
-                state.presence[uid] = await dbRequest('user_presence/' + enc(uid));
+                var presence = await dbRequest('user_presence/' + enc(uid));
+                if (state.session && generation === state.sessionGeneration) state.presence[uid] = presence;
             } catch (error) {
-                state.presence[uid] = null;
+                if (state.session && generation === state.sessionGeneration) state.presence[uid] = null;
             }
         }
         return thread;
@@ -753,8 +768,8 @@
         var docs = '';
         if (front || back) {
             docs = '<div class="doc-pair">' +
-                (front ? '<button type="button" data-action="open-image" data-src="' + esc(front) + '">' + imgTag(front, 'Front of document', '') + '</button>' : '') +
-                (back ? '<button type="button" data-action="open-image" data-src="' + esc(back) + '">' + imgTag(back, 'Back of document', '') + '</button>' : '') +
+                (front ? kycDocumentButton(front, 'Front of document', submission.frontImageKey, submission.frontImageIv, submission.frontImageMimeType) : '') +
+                (back ? kycDocumentButton(back, 'Back of document', submission.backImageKey, submission.backImageIv, submission.backImageMimeType) : '') +
                 '</div>';
         }
         var review = '';
@@ -776,6 +791,87 @@
             '<p class="meta">' + esc(submission.userEmail || '') + ' · ' + esc(submission.documentType || 'Document') + ' · Submitted ' + esc(fmtTs(submission.submittedAt)) + '</p>' +
             docs + review + actions +
             '</div></article>';
+    }
+
+    function isProtectedKycUrl(url) {
+        return String(url || '').indexOf('/raw/upload/') !== -1;
+    }
+
+    function kycDocumentButton(url, alt, key, iv, mimeType) {
+        if (!isProtectedKycUrl(url)) {
+            return '<button type="button" data-action="open-image" data-src="' + esc(url) + '">' +
+                imgTag(url, alt, '') + '</button>';
+        }
+        if (!key || !iv) return '<span class="muted small">Protected document unavailable.</span>';
+        try {
+            var assetUrl = new URL(url);
+            if (assetUrl.protocol !== 'https:' || assetUrl.hostname !== 'res.cloudinary.com') {
+                return '<span class="muted small">Protected document unavailable.</span>';
+            }
+        } catch (error) {
+            return '<span class="muted small">Protected document unavailable.</span>';
+        }
+        return '<button type="button" data-action="open-kyc-image" data-kyc-url="' + esc(url) +
+            '" data-kyc-key="' + esc(key) + '" data-kyc-iv="' + esc(iv) +
+            '" data-kyc-mime="' + esc(mimeType || 'image/jpeg') + '" data-alt="' + esc(alt) +
+            '" disabled><span class="muted small">Decrypting secure document…</span></button>';
+    }
+
+    function clearKycObjectUrls() {
+        state.kycImageGeneration += 1;
+        if (state.kycAbortController) state.kycAbortController.abort();
+        state.kycAbortController = null;
+        state.kycObjectUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+        state.kycObjectUrls = [];
+    }
+
+    async function hydrateProtectedKycImages() {
+        var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-kyc-url]'));
+        if (!buttons.length) return;
+        state.kycAbortController = new AbortController();
+        var generation = state.kycImageGeneration;
+        var signal = state.kycAbortController.signal;
+        await Promise.all(buttons.map(function (button) {
+            return loadProtectedKycImage(button, generation, signal);
+        }));
+    }
+
+    async function loadProtectedKycImage(button, generation, signal) {
+        function current() {
+            return !signal.aborted && state.session && generation === state.kycImageGeneration && button.isConnected;
+        }
+        if (!current()) return;
+        button.disabled = true;
+        button.innerHTML = '<span class="muted small">Decrypting secure document…</span>';
+        try {
+            var response = await fetch(button.getAttribute('data-kyc-url'), { cache: 'no-store', signal: signal });
+            if (!response.ok) throw new Error('Could not load a protected KYC document.');
+            function decode(value) {
+                return Uint8Array.from(atob(value), function (character) { return character.charCodeAt(0); });
+            }
+            var key = await crypto.subtle.importKey(
+                'raw', decode(button.getAttribute('data-kyc-key')), { name: 'AES-GCM' }, false, ['decrypt']
+            );
+            var clear = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: decode(button.getAttribute('data-kyc-iv')), tagLength: 128 },
+                key,
+                await response.arrayBuffer()
+            );
+            if (!current()) return;
+            var objectUrl = URL.createObjectURL(new Blob([clear], {
+                type: button.getAttribute('data-kyc-mime') || 'image/jpeg'
+            }));
+            state.kycObjectUrls.push(objectUrl);
+            button.setAttribute('data-src', objectUrl);
+            button.setAttribute('data-action', 'open-kyc-image');
+            button.disabled = false;
+            button.innerHTML = '<img src="' + esc(objectUrl) + '" alt="' + esc(button.getAttribute('data-alt') || 'KYC document') + '">';
+        } catch (error) {
+            if (!current()) return;
+            button.setAttribute('data-action', 'retry-kyc-image');
+            button.disabled = false;
+            button.innerHTML = '<span class="muted small">Document could not be opened. Click to retry.</span>';
+        }
     }
 
     function kycView() {
@@ -924,6 +1020,7 @@
 
     function render() {
         if (!state.session) return;
+        clearKycObjectUrls();
         var email = $('#account-email');
         if (email) email.textContent = state.session.email || '';
         updateTabs();
@@ -947,6 +1044,7 @@
         }
         root.innerHTML = html;
         if (state.view === 'listings') renderListingResults();
+        if (state.view === 'kyc') hydrateProtectedKycImages().catch(function (error) { toast(error.message, 'error'); });
         if (state.view === 'support' && state.supportUid) scrollChatToBottom();
     }
 
@@ -1010,7 +1108,7 @@
     }
 
     function openImage(src) {
-        var url = imageUrl(src);
+        var url = state.kycObjectUrls.indexOf(src) !== -1 ? src : imageUrl(src);
         if (!url) return;
         openModal({
             title: 'Document',
@@ -1443,13 +1541,16 @@
 
     async function refreshAll(showToast) {
         if (!state.session) return;
+        var generation = state.sessionGeneration;
         state.loadError = '';
         try {
             await Promise.all([loadCore(), loadSupport()]);
+            if (!state.session || generation !== state.sessionGeneration) return;
             state.loaded = true;
             render();
             if (showToast) toast('Data refreshed.');
         } catch (error) {
+            if (!state.session || generation !== state.sessionGeneration) return;
             if (error && error.authFailure) {
                 signOut(error.message);
                 return;
@@ -1527,17 +1628,27 @@
     }
 
     function signOut(message) {
+        state.sessionGeneration += 1;
         stopPoll();
         closeModal();
+        clearKycObjectUrls();
         clearSession();
         state.session = null;
         state.loaded = false;
         state.busy = false;
         state.loadError = '';
         state.support = {};
+        state.properties = {};
+        state.users = {};
+        state.reports = {};
+        state.userReports = {};
+        state.kyc = {};
+        state.deletionHistory = {};
         state.presence = {};
         state.supportUid = null;
         state.view = 'overview';
+        var root = $('#view-root');
+        if (root) root.innerHTML = '';
         showLogin(message);
     }
 
@@ -1675,6 +1786,14 @@
                 return;
             case 'open-image':
                 openImage(element.getAttribute('data-src'));
+                return;
+            case 'open-kyc-image':
+                if (element.getAttribute('data-src')) openImage(element.getAttribute('data-src'));
+                return;
+            case 'retry-kyc-image':
+                if (state.kycAbortController) {
+                    await loadProtectedKycImage(element, state.kycImageGeneration, state.kycAbortController.signal);
+                }
                 return;
             case 'close-modal':
                 closeModal();

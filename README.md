@@ -49,6 +49,17 @@ for the same project. To rotate the admin account, create a new Firebase Auth
 user, replace the UID in the config and in `database.rules.json`, then redeploy
 the rules.
 
+The web key is restricted to Identity Toolkit (sign-in) and Token Service
+(session refresh), with production and the documented local development
+referrers allowed. The admin console is available by its direct URL and is not
+linked from the public homepage.
+
+New KYC documents are encrypted with AES-256-GCM before upload. Only the owner
+and dedicated admin can read their decryption keys from Firebase. The admin
+decrypts images in memory and clears document keys and image URLs on sign-out.
+Run the admin regression checks with
+`node --test tests/gharbato-admin-kyc.test.cjs`.
+
 Contact messages are stored in the Supabase `contact_messages` table. StudentOS account-deletion requests are stored separately in `account_deletion_requests`. Review them in the Supabase Dashboard under **Table Editor**. The forms do not send email notifications or delete accounts automatically; verify requests and fulfill them manually, including removing the user's certificate records and files.
 
 ## Security Features

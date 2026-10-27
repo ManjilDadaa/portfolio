@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Quiz Hub - Manjil Basnet</title>
     <meta name="description" content="Test your programming knowledge with interactive quizzes. Perfect companion to Python tutorials.">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261027-2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
+    <link rel="icon" type="image/png" href="Images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <style>
         /* Quiz page specific styles */
         #quiz {
@@ -129,22 +133,23 @@
             margin-bottom: 2rem;
         }
     </style>
-    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <header>
         <div class="container">
             <div class="nav-container">
-                <nav>
-                    <div class="nav-logo" onclick="window.location.href='index.html'">MB</div>
-                    <button class="nav-toggle" aria-label="toggle navigation">
-                        <i class="fas fa-bars"></i>
+                <nav aria-label="Main navigation">
+                    <a class="brand" href="index.html">
+                        <span class="brand-mark" aria-hidden="true">MB</span>
+                        <span class="brand-name">Manjil Basnet</span>
+                    </a>
+                    <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-menu">
+                        <span></span>
                     </button>
-                    <ul class="nav-menu">
-                        <li><a href="index.html#home">Home</a></li>
-                        <li><a href="index.html#qualifications">Qualifications</a></li>
-                        <li><a href="index.html#skills">Skills</a></li>
+                    <ul class="nav-menu" id="site-menu">
                         <li><a href="index.html#projects">Projects</a></li>
+                        <li><a href="index.html#education">Education</a></li>
+                        <li><a href="index.html#skills">Skills</a></li>
                         <li><a href="quiz.html" class="active">Quiz</a></li>
                         <li><a href="index.html#contact">Contact</a></li>
                     </ul>
@@ -318,12 +323,14 @@
     </main>
 
     <footer>
-        <div class="container">
-            <p>&copy; 2026 Manjil Basnet. All rights reserved.</p>
-            <p class="legal-footer-links">
+        <div class="container footer-inner">
+            <p class="footer-note">&copy; 2026 Manjil Basnet · Built by hand</p>
+            <nav class="legal-footer-links" aria-label="Privacy and account links">
                 <a href="studentos-privacy.html">StudentOS privacy</a>
                 <a href="studentos-delete-account.html">Delete StudentOS account</a>
-            </p>
+                <a href="gharbato-privacy.html">GharBato privacy</a>
+                <a href="gharbato-delete-account.html">Delete GharBato account</a>
+            </nav>
         </div>
     </footer>
 

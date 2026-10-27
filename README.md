@@ -5,6 +5,7 @@ A modern, responsive portfolio website with interactive Python quiz functionalit
 ## Features
 
 - **Responsive Design**: Works on all devices
+- **Project showcase**: GharBato, StudentOS, HeartSync, and an AI chatbot experiment
 - **Interactive Quiz System**: Python learning quizzes with progress tracking
 - **Secure Implementation**: Input sanitization and XSS protection
 - **Performance Optimized**: Lazy loading and efficient DOM manipulation
@@ -24,7 +25,7 @@ portfolio/
 ├── quiz.js             # Quiz functionality
 ├── quiz-data.js        # Quiz questions and data
 ├── supabase-config.js  # Supabase publishable-key client for form submissions
-├── project1.html       # Project detail page
+├── project1.html       # Project note page
 ├── studentos-privacy.html        # StudentOS privacy policy
 ├── studentos-delete-account.html # Public account-deletion request page
 ├── studentos-delete-account.js   # Submits requests to Supabase
@@ -35,7 +36,8 @@ portfolio/
 ├── gharbato-admin.css            # Admin console styling
 ├── gharbato-admin.js             # Admin console logic (Firebase Auth + Realtime Database REST)
 ├── gharbato-admin-config.js      # Public Firebase web config for the admin console
-└── assets/             # Images and media files
+├── Images/             # Portrait, project artwork, app logos, and favicon
+└── tests/              # Admin console regression tests
 ```
 
 The GharBato admin console signs in with Firebase email/password using a

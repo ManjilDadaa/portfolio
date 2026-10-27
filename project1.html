@@ -3,86 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-commerce Platform - Manjil Basnet</title>
-    <link rel="stylesheet" href="style.css?v=20261019-2">
-    <style>
-        .project-details {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        .project-image {
-            width: 100%;
-            max-width: 600px;
-            height: auto;
-            display: block;
-            margin: 0 auto 2rem;
-            border-radius: 5px;
-            box-shadow: 0 0 20px var(--primary-color);
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 2rem;
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-        .back-link:hover {
-            color: var(--secondary-color);
-        }
-    </style>
+    <meta name="description" content="E-commerce Platform — a full-stack storefront study project by Manjil Basnet.">
+    <meta name="author" content="Manjil Basnet">
+    <meta name="theme-color" content="#f7f4ee">
+    <title>E-commerce Platform — Manjil Basnet</title>
+    <link rel="icon" type="image/png" href="Images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="style.css?v=20261027-2">
 </head>
 <body>
     <header>
-        <nav>
-            <ul>
-                <li><a href="index.html#home">Home</a></li>
-                <li><a href="index.html#about">About</a></li>
-                <li><a href="index.html#skills">Skills</a></li>
-                <li><a href="index.html#projects">Projects</a></li>
-                <li><a href="index.html#contact">Contact</a></li>
-            </ul>
-        </nav>
+        <div class="container">
+            <div class="nav-container">
+                <nav aria-label="Main navigation">
+                    <a class="brand" href="index.html">
+                        <span class="brand-mark" aria-hidden="true">MB</span>
+                        <span class="brand-name">Manjil Basnet</span>
+                    </a>
+                    <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-menu">
+                        <span></span>
+                    </button>
+                    <ul class="nav-menu" id="site-menu">
+                        <li><a href="index.html#projects">Projects</a></li>
+                        <li><a href="index.html#education">Education</a></li>
+                        <li><a href="index.html#skills">Skills</a></li>
+                        <li><a href="quiz.html">Quiz</a></li>
+                        <li><a href="index.html#contact">Contact</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
     </header>
 
     <main>
-        <section class="project-details">
+        <article class="page-article">
+            <p class="section-index">Project note</p>
             <h1>E-commerce Platform</h1>
-            <img src="/placeholder.svg?height=400&width=600" alt="E-commerce Platform" class="project-image">
-            <p>The E-commerce Platform is a full-stack solution built with React for the frontend and Node.js for the backend. It provides a seamless shopping experience for users and a powerful management system for administrators.</p>
-            <h2>Key Features</h2>
-            <ul>
-                <li>Responsive design for mobile and desktop</li>
-                <li>User authentication and authorization</li>
-                <li>Product catalog with search and filter functionality</li>
-                <li>Shopping cart and checkout process</li>
-                <li>Order management system</li>
-                <li>Admin dashboard for product and user management</li>
+            <p class="article-lead">
+                A full-stack storefront study: React on the front, Node.js and Express on the back, with
+                MongoDB for storage and Stripe for payments. Built to learn how a catalog, a cart, and an
+                order pipeline fit together end to end.
+            </p>
+
+            <h2>What it does</h2>
+            <ul class="article-list">
+                <li>Responsive storefront for mobile and desktop</li>
+                <li>Account sign-up, sign-in, and role-based authorization</li>
+                <li>Product catalog with search and filtering</li>
+                <li>Cart and checkout flow</li>
+                <li>Order management and an admin dashboard</li>
             </ul>
-            <h2>Technologies Used</h2>
-            <ul>
-                <li>React.js</li>
-                <li>Node.js</li>
-                <li>Express.js</li>
+
+            <h2>Stack</h2>
+            <ul class="article-list">
+                <li>React with Redux for state</li>
+                <li>Node.js and Express</li>
                 <li>MongoDB</li>
-                <li>Redux for state management</li>
                 <li>Stripe for payment processing</li>
             </ul>
-            <a href="index.html#projects" class="back-link">← Back to Projects</a>
-        </section>
+
+            <a class="btn btn--ghost back-link" href="index.html#projects">
+                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false"><path d="M13 8H3m0 0 4.5-4.5M3 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Back to projects
+            </a>
+        </article>
     </main>
 
     <footer>
-        <div class="container">
-            <p>&copy; 2026 Manjil Basnet. All rights reserved.</p>
-            <p class="legal-footer-links">
+        <div class="container footer-inner">
+            <p class="footer-note">&copy; 2026 Manjil Basnet · Built by hand</p>
+            <nav class="legal-footer-links" aria-label="Privacy and account links">
                 <a href="studentos-privacy.html">StudentOS privacy</a>
                 <a href="studentos-delete-account.html">Delete StudentOS account</a>
-            </p>
+                <a href="gharbato-privacy.html">GharBato privacy</a>
+                <a href="gharbato-delete-account.html">Delete GharBato account</a>
+            </nav>
         </div>
     </footer>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20261027-1"></script>
 </body>
 </html>
-

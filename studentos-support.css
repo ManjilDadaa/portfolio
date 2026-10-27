@@ -27,8 +27,7 @@
 }
 
 .studentos-support-page .nav-container {
-    border: 1px solid var(--support-border);
-    border-top: 0;
+    border: 0;
 }
 
 .support-brand {

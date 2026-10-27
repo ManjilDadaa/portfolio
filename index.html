@@ -3,28 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Manjil Basnet - Computer Science student specializing in AI. Explore my portfolio, projects, and interactive Python quizzes. YouTube tutorials available.">
-    <meta name="keywords" content="Manjil Basnet, Computer Science, AI, Python, Portfolio, Web Development, Programming Tutorials">
+    <meta name="description" content="Manjil Basnet — computer science student in Kathmandu building Android and web apps. GharBato property marketplace, StudentOS certificate vault, and interactive Python quizzes.">
     <meta name="author" content="Manjil Basnet">
-    <title>Manjil Basnet - Computer Science & AI Student Portfolio</title>
-    <link rel="stylesheet" href="style.css?v=20261019-2">
-    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    <meta name="theme-color" content="#f7f4ee">
+    <link rel="canonical" href="https://manjilbasnet.com.np/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Manjil Basnet — Computer Science &amp; AI">
+    <meta property="og:description" content="Computer science student in Kathmandu building Android and web apps: GharBato, StudentOS, and more.">
+    <meta property="og:image" content="https://manjilbasnet.com.np/Images/manjil-basnet.jpg">
+    <meta property="og:url" content="https://manjilbasnet.com.np/">
+    <title>Manjil Basnet — Computer Science &amp; AI</title>
+    <link rel="icon" type="image/png" href="Images/favicon.png?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="style.css?v=20261027-2">
 </head>
 <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <header>
         <div class="container">
             <div class="nav-container">
-                <nav>
-                    <div id="home-link" class="nav-logo">MB</div>
-                    <button class="nav-toggle" aria-label="toggle navigation">
+                <nav aria-label="Main navigation">
+                    <a class="brand" id="home-link" href="#home">
+                        <span class="brand-mark" aria-hidden="true">MB</span>
+                        <span class="brand-name">Manjil Basnet</span>
+                    </a>
+                    <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-menu">
                         <span></span>
                     </button>
-                    <ul class="nav-menu">
-                        <li><a href="#home">Home</a></li>
-                        <li><a href="#qualifications">Qualifications</a></li>
-                        <li><a href="#skills">Skills</a></li>
+                    <ul class="nav-menu" id="site-menu">
                         <li><a href="#projects">Projects</a></li>
-                        <li><a href="#gharbato">GharBato</a></li>
+                        <li><a href="#education">Education</a></li>
+                        <li><a href="#skills">Skills</a></li>
                         <li><a href="quiz.html">Quiz</a></li>
                         <li><a href="#contact">Contact</a></li>
                     </ul>
@@ -33,129 +44,291 @@
         </div>
     </header>
 
-    <main>
-        <section id="home">
+    <main id="main">
+        <section id="home" class="hero">
             <div class="container">
-                <div class="home-content">
-                    <div class="about-brief fade-in">
-                        <h2>Welcome</h2>
-                        <p>Hello! I'm Manjil Basnet, a dedicated computer science student at Softwarica College, Coventry University, majoring in Computer Science with Artificial Intelligence. 
-                            I enjoy exploring new technologies and finding innovative solutions to complex problems. Check out my Python tutorials on YouTube and test your knowledge with interactive quizzes!
-                           </p>
-                        <a class="gharbato-home-cta" href="https://github.com/ManjilDadaa/portfolio/releases/download/GHARBATOAPK_v1.1/gharbato_v1.1.apk">Get GharBato for Android</a>
-                    </div>
-                    <div class="profile-container float-animation">
-                        <img src="Images/titlePhoto.png" height="300" width="300" alt="Manjil Basnet - Computer Science Student Profile Photo" class="profile-photo">
-                        <h1 id="typewriter"></h1>
-                        <p>IT Student</p>
-                        <div class="social-links">
-                            <a href="https://www.youtube.com/@ManjiLDadaa" target="_blank" rel="noopener noreferrer" class="youtube-link" title="Visit my YouTube channel">
-                                <i class="fab fa-youtube"></i>
-                                <span>YouTube Channel</span>
+                <div class="hero-grid">
+                    <div class="hero-copy">
+                        <p class="eyebrow">Kathmandu, Nepal · Portfolio 2026</p>
+                        <h1>Manjil<br>Basnet</h1>
+                        <p class="hero-subtitle">Computer science student &amp; app developer</p>
+                        <p class="hero-lead">
+                            I study artificial intelligence at Softwarica College, Coventry University, and build
+                            Android and web apps outside of class — a property marketplace used across Nepal,
+                            a certificate vault for students, and smaller experiments in between.
+                        </p>
+                        <div class="hero-actions">
+                            <a class="btn btn--primary" href="#projects">
+                                See my work
+                                <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M8 3v10M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </a>
+                            <a class="btn btn--ghost" href="https://github.com/ManjilDadaa/portfolio/releases/download/GHARBATOAPK_v1.1/gharbato_v1.1.apk">
+                                <img src="Images/gharbato-logo.png" alt="" width="20" height="20">
+                                Get GharBato
                             </a>
                         </div>
+                        <p class="hero-quiet-link">
+                            <a href="quiz.html">Or test your Python knowledge with my interactive quiz →</a>
+                        </p>
                     </div>
-                </div>
-            </div>
-            <div class="neon-bg"></div>
-        </section>
 
-        <section id="qualifications">
-            <div class="container slide-in-right">
-                <h2>My Qualifications</h2>
-                <div class="qualifications-container">
-                    <div class="qualification-buttons">
-                        <button class="qualification-button">
-                            <img src="Images/soft final.png" height="150" width="300" alt="Softwarica College Coventry University Logo">
-                            <h3>Bsc (Hons) Comp Sci with AI</h3>
-                            <p>Coventry University, 2024 Sep - Now</p>
-                        </button>
-                        <button class="qualification-button">
-                            <img src="Images/global.png" height="150" width="300" alt="Global School of Science Logo">
-                            <h3>+2 Science</h3>
-                            <p>Global School of Science, NEB </p>
-                        </button>
-                        <button class="qualification-button">
-                            <img src="Images/valley finallll.png" height="150" width="300" alt="Valley Public High School Logo">
-                            <h3>SEE -10th</h3>
-                            <p>Valley Public High School</p>
-                        </button>
-                    </div>
+                    <figure class="portrait">
+                        <div class="portrait-photo">
+                            <img src="Images/manjil-basnet.jpg" width="446" height="446" alt="Portrait of Manjil Basnet">
+                        </div>
+                        <figcaption>
+                            <span>BSc (Hons) Computer Science with AI</span>
+                            <span>Softwarica College · 2024 — present</span>
+                        </figcaption>
+                    </figure>
                 </div>
-            </div>
-        </section>
 
-        <section id="skills">
-            <div class="container fade-in">
-                <h2>Skills</h2>
-                <ul class="skills-list">
-                    <li>Python</li>
-                    <li>Java</li>
-                    <li>Git</li>
-                    <li>GitHub</li>
-                    <li>APIs</li>
-                    <li>Agile Methodologies</li>
-                    <li>Supabase</li>
-                    <li>SQL</li>
-                    <li>Artificial Intelligence</li>
-                    <li>Machine Learning</li>
-                </ul>
+                <p class="tool-line">
+                    <span>Python</span>
+                    <span>Java</span>
+                    <span>Kotlin</span>
+                    <span>Flutter</span>
+                    <span>Firebase</span>
+                    <span>Supabase</span>
+                    <span>SQL</span>
+                </p>
             </div>
         </section>
 
         <section id="projects">
-            <div class="container slide-in-left">
-                <h2>Projects</h2>
-                <div class="project-grid">
-                    <a href="https://github.com/ManjilBasnetDev/Test-HeartSync" target="_blank" rel="noopener noreferrer" class="project">
-                        <img src="Images/HeartSync.png" height="200" width="300" alt="HeartSync Dating App Project Screenshot">
-                        <h3>HeartSync - Dating App</h3>
-                        <p>A modern dating application with real-time messaging and matching features</p>
-                    </a>
-                    <a href="#" onclick="showMaintenanceMessage(event)" class="project">
-                        <img src="Images/chatBOT.jpg" height="200" width="300" alt="AI Chatbot Project Screenshot">
-                        <h3>AI Chatbot</h3>
-                        <p>An intelligent chatbot powered by machine learning</p>
-                    </a>
-                    <div class="project" id="gharbato">
-                        <img src="Images/GharBato.png" height="200" width="300" alt="GharBato App Screenshot" onerror="this.style.display='none'">
+            <div class="container">
+                <header class="section-head">
+                    <p class="section-index">01 <span>Projects</span></p>
+                    <h2>Selected work</h2>
+                    <p class="section-intro">Two apps I ship and look after, plus two side projects that taught me the rest.</p>
+                </header>
+
+                <article class="feature" id="gharbato">
+                    <div class="feature-media feature-media--gharbato">
+                        <span class="media-label">Android app</span>
+                        <img src="Images/gharbato-logo.png" width="512" height="512" alt="GharBato app logo">
+                    </div>
+                    <div class="feature-body">
+                        <p class="feature-kicker">Property marketplace · Nepal</p>
                         <h3>GharBato</h3>
-                        <p>A property marketplace for discovering, renting, buying, and listing homes in Nepal</p>
-                        <a href="https://github.com/ManjilDadaa/portfolio/releases/download/GHARBATOAPK_v1.1/gharbato_v1.1.apk" class="apk-download-btn">Download Android APK</a>
-                        <p><a href="gharbato-privacy.html">GharBato privacy policy</a> · <a href="gharbato-delete-account.html">Delete account</a></p>
+                        <p class="feature-copy">
+                            A place to find, rent, and list homes across Nepal. GharBato pairs verified listings
+                            with owner messaging, KYC checks for sellers, and an AI assistant that answers
+                            questions about a property before you visit it.
+                        </p>
+                        <ul class="tag-list" aria-label="Technologies used">
+                            <li>Kotlin</li>
+                            <li>Firebase</li>
+                            <li>Cloudinary</li>
+                            <li>Gemini</li>
+                        </ul>
+                        <div class="actions">
+                            <a class="btn btn--primary btn--sm" href="https://github.com/ManjilDadaa/portfolio/releases/download/GHARBATOAPK_v1.1/gharbato_v1.1.apk">
+                                Download APK
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false"><path d="M8 2.5v8m0 0L4.5 7M8 10.5 11.5 7M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </a>
+                            <a class="btn btn--ghost btn--sm" href="gharbato-privacy.html">Privacy policy</a>
+                        </div>
+                        <p class="fine-print">
+                            <a href="gharbato-delete-account.html">Delete your GharBato account</a>
+                        </p>
+                    </div>
+                </article>
+
+                <article class="feature" id="studentos">
+                    <div class="feature-media feature-media--studentos">
+                        <span class="media-label">Flutter app</span>
+                        <img src="Images/studentos-icon.png" width="512" height="512" alt="StudentOS app icon">
+                    </div>
+                    <div class="feature-body">
+                        <p class="feature-kicker">Private certificate vault</p>
+                        <h3>StudentOS</h3>
+                        <p class="feature-copy">
+                            Keeps certificates, marksheets, and course documents in one private vault. Every file
+                            belongs to one account, stays behind row-level security, and leaves only through
+                            short-lived share links you create on purpose.
+                        </p>
+                        <ul class="tag-list" aria-label="Technologies used">
+                            <li>Flutter</li>
+                            <li>Supabase</li>
+                            <li>PostgreSQL</li>
+                            <li>Dart</li>
+                        </ul>
+                        <div class="actions">
+                            <a class="btn btn--primary btn--sm" href="https://github.com/ManjilDadaa/Student_OS" target="_blank" rel="noopener noreferrer">
+                                View on GitHub
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false"><path d="M6 3h7v7M13 3 4 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </a>
+                            <a class="btn btn--ghost btn--sm" href="studentos-privacy.html">Privacy policy</a>
+                        </div>
+                        <p class="fine-print">
+                            <a href="studentos-delete-account.html">Delete your StudentOS account</a>
+                        </p>
+                    </div>
+                </article>
+
+                <div class="project-grid">
+                    <article class="card">
+                        <div class="card-media">
+                            <img src="Images/heartsync-cover.jpg" width="1200" height="800" loading="lazy" alt="HeartSync app artwork — a gradient heart on a purple background">
+                        </div>
+                        <div class="card-body">
+                            <p class="card-kicker">Dating app</p>
+                            <h3>HeartSync</h3>
+                            <p>A dating app with real-time messaging and matching, built as a study in live data and chat.</p>
+                            <a class="btn btn--ghost btn--sm" href="https://github.com/ManjilBasnetDev/Test-HeartSync" target="_blank" rel="noopener noreferrer">
+                                View on GitHub
+                                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false"><path d="M6 3h7v7M13 3 4 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </a>
+                        </div>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-media">
+                            <img src="Images/chatbot-cover.jpg" width="1400" height="840" loading="lazy" alt="A 3D chatbot character floating above a phone">
+                        </div>
+                        <div class="card-body">
+                            <p class="card-kicker">Machine learning</p>
+                            <h3>AI Chatbot</h3>
+                            <p>An experiment in conversational AI — intent matching and response ranking on top of a small dataset.</p>
+                            <button class="btn btn--ghost btn--sm" type="button" data-maintenance>In maintenance</button>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="education">
+            <div class="container">
+                <header class="section-head">
+                    <p class="section-index">02 <span>Education</span></p>
+                    <h2>Where I study</h2>
+                </header>
+                <ol class="education-list">
+                    <li class="education-item">
+                        <div class="edu-logo"><img src="Images/soft final.png" width="344" height="185" loading="lazy" alt="Softwarica College and Coventry University logo"></div>
+                        <div class="edu-main">
+                            <h3>BSc (Hons) Computer Science with AI</h3>
+                            <p>Softwarica College · Coventry University</p>
+                        </div>
+                        <p class="edu-years">2024 — present</p>
+                    </li>
+                    <li class="education-item">
+                        <div class="edu-logo"><img src="Images/global.png" width="344" height="185" loading="lazy" alt="Global School of Science logo"></div>
+                        <div class="edu-main">
+                            <h3>+2 Science (NEB)</h3>
+                            <p>Global School of Science</p>
+                        </div>
+                        <p class="edu-years">Completed</p>
+                    </li>
+                    <li class="education-item">
+                        <div class="edu-logo"><img src="Images/valley finallll.png" width="344" height="185" loading="lazy" alt="Valley Public High School logo"></div>
+                        <div class="edu-main">
+                            <h3>SEE — Grade 10</h3>
+                            <p>Valley Public High School</p>
+                        </div>
+                        <p class="edu-years">Completed</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="skills">
+            <div class="container">
+                <header class="section-head">
+                    <p class="section-index">03 <span>Skills</span></p>
+                    <h2>What I work with</h2>
+                </header>
+                <div class="skill-columns">
+                    <div class="skill-column">
+                        <h3>Languages</h3>
+                        <ul>
+                            <li>Python</li>
+                            <li>Java</li>
+                            <li>Kotlin</li>
+                            <li>SQL</li>
+                        </ul>
+                    </div>
+                    <div class="skill-column">
+                        <h3>Platforms &amp; tools</h3>
+                        <ul>
+                            <li>Firebase</li>
+                            <li>Supabase</li>
+                            <li>Git &amp; GitHub</li>
+                            <li>REST APIs</li>
+                        </ul>
+                    </div>
+                    <div class="skill-column">
+                        <h3>Focus</h3>
+                        <ul>
+                            <li>Artificial intelligence</li>
+                            <li>Machine learning</li>
+                            <li>Android development</li>
+                            <li>Agile delivery</li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </section>
 
-
-
         <section id="contact">
-            <div class="container slide-in-right">
-                <h2>Contact</h2>
-                <form id="contact-form">
-                    <input type="text" name="name" placeholder="Your Name" maxlength="100" required>
-                    <input type="email" name="email" placeholder="Your Email" maxlength="254" required>
-                    <textarea name="message" placeholder="Your Message" maxlength="5000" required></textarea>
-                    <button type="submit">Send Message</button>
-                </form>
+            <div class="container">
+                <div class="contact-panel">
+                    <div class="contact-copy">
+                        <p class="section-index">04 <span>Contact</span></p>
+                        <h2>Let's talk</h2>
+                        <p>
+                            Internships, collaborations, or a question about one of my projects — send a note
+                            and I'll get back to you.
+                        </p>
+                        <ul class="contact-links">
+                            <li>
+                                <a href="https://www.youtube.com/@ManjiLDadaa" target="_blank" rel="noopener noreferrer">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8ZM10 15V9l5.2 3Z" fill="currentColor"/></svg>
+                                    YouTube
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://github.com/ManjilDadaa" target="_blank" rel="noopener noreferrer">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" fill="currentColor"/></svg>
+                                    GitHub
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <form id="contact-form">
+                        <div class="field">
+                            <label for="contact-name">Name</label>
+                            <input type="text" id="contact-name" name="name" placeholder="Your name" maxlength="100" autocomplete="name" required>
+                        </div>
+                        <div class="field">
+                            <label for="contact-email">Email</label>
+                            <input type="email" id="contact-email" name="email" placeholder="you@example.com" maxlength="254" autocomplete="email" required>
+                        </div>
+                        <div class="field">
+                            <label for="contact-message">Message</label>
+                            <textarea id="contact-message" name="message" placeholder="What would you like to talk about?" maxlength="5000" rows="5" required></textarea>
+                        </div>
+                        <button class="btn btn--primary" type="submit">Send message</button>
+                    </form>
+                </div>
             </div>
         </section>
     </main>
 
     <footer>
-        <div class="container">
-            <p>&copy; 2026 Manjil Basnet. All rights reserved.</p>
-            <p class="legal-footer-links" aria-label="Privacy and account links">
+        <div class="container footer-inner">
+            <p class="footer-note">&copy; 2026 Manjil Basnet · Built by hand</p>
+            <nav class="legal-footer-links" aria-label="Privacy and account links">
                 <a href="studentos-privacy.html">StudentOS privacy</a>
                 <a href="studentos-delete-account.html">Delete StudentOS account</a>
-                <a href="gharbato-privacy.html">GharBato privacy policy</a>
+                <a href="gharbato-privacy.html">GharBato privacy</a>
                 <a href="gharbato-delete-account.html">Delete GharBato account</a>
-            </p>
+            </nav>
         </div>
     </footer>
 
     <script src="supabase-config.js?v=20261017-3"></script>
-    <script src="script.js?v=20261017-3"></script>
+    <script src="script.js?v=20261027-1"></script>
 </body>
 </html>

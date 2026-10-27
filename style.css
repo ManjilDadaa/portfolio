@@ -125,7 +125,7 @@ h2 {
    Header
    ========================================================================== */
 
-header {
+body > header {
     position: fixed;
     top: 0;
     left: 0;
@@ -458,6 +458,8 @@ section {
 
 .portrait {
     justify-self: end;
+    align-self: start;
+    margin-top: 1.5rem;
     width: min(100%, 336px);
     padding: 12px 12px 14px;
     background: var(--surface);

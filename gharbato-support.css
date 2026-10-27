@@ -10,11 +10,11 @@
     --support-accent-soft: rgba(219, 201, 232, 0.13);
 }
 
-.gharbato-support-page .support-brand-mark {
+.gharbato-support-page .support-brand-mark:not(.support-brand-mark--img) {
     background: #2b193d;
 }
 
-[data-theme="dark"] .gharbato-support-page .support-brand-mark {
+[data-theme="dark"] .gharbato-support-page .support-brand-mark:not(.support-brand-mark--img) {
     background: #6d4a83;
 }
 

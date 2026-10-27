@@ -51,6 +51,23 @@
     font-weight: 700;
 }
 
+.support-brand-mark--img {
+    background: #ffffff;
+    border: 1px solid var(--support-border);
+    overflow: hidden;
+}
+
+.support-brand-mark--img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.support-brand-mark--pad img {
+    width: 74%;
+    height: 74%;
+}
+
 .support-brand-name {
     display: grid;
     gap: 0.05rem;

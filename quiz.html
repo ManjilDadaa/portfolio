@@ -187,7 +187,7 @@
                             <input type="text" id="username" placeholder="Enter username" required maxlength="30">
                             <input type="password" id="userpin" placeholder="4-digit PIN" required maxlength="4" pattern="[0-9]{4}">
                             <small style="color: rgba(255,255,255,0.8); margin-top: 0.5rem; display: block;">Username + PIN combination is your unique ID</small>
-                            <button onclick="startQuiz()" class="primary-btn">
+                            <button data-quiz-action="start" class="primary-btn">
                                 <i class="fas fa-rocket"></i> Start Learning!
                             </button>
                         </div>
@@ -200,7 +200,7 @@
                         </div>
                         <h3>Choose Programming Language</h3>
                         <div class="language-options">
-                            <button class="language-option active" onclick="selectLanguage('python')">
+                            <button class="language-option active" data-quiz-action="language" data-language="python">
                                 <i class="fab fa-python"></i>
                                 <span>Python</span>
                                 <small>7 Topics Available</small>
@@ -216,7 +216,7 @@
                                 <small>Coming Soon</small>
                             </button>
                         </div>
-                        <button class="secondary-btn" onclick="goBackToStart()" style="margin-top: 1rem;">
+                        <button class="secondary-btn" data-quiz-action="back-start" style="margin-top: 1rem;">
                             <i class="fas fa-arrow-left"></i> Back
                         </button>
                     </div>
@@ -228,7 +228,7 @@
                         </div>
                         <h3>Your Learning Progress</h3>
                         <div id="progress-list" class="progress-grid"></div>
-                        <button class="secondary-btn" onclick="goBackToLanguages()" style="margin-top: 1rem;">
+                        <button class="secondary-btn" data-quiz-action="back-languages" style="margin-top: 1rem;">
                             <i class="fas fa-arrow-left"></i> Back to Languages
                         </button>
                     </div>
@@ -242,7 +242,7 @@
                         <p>Choose a topic to test your knowledge. Each quiz contains 10-15 questions with increasing difficulty.</p>
                         
                         <div class="topics-grid">
-                            <button class="topic-card" onclick="loadTopic('basics')">
+                            <button class="topic-card" data-quiz-action="topic" data-topic="basics">
                                 <div class="topic-icon basics">
                                     <i class="fas fa-play-circle"></i>
                                 </div>
@@ -251,7 +251,7 @@
                                 <span class="difficulty">Beginner</span>
                             </button>
 
-                            <button class="topic-card" onclick="loadTopic('datatypes')">
+                            <button class="topic-card" data-quiz-action="topic" data-topic="datatypes">
                                 <div class="topic-icon datatypes">
                                     <i class="fas fa-database"></i>
                                 </div>
@@ -260,7 +260,7 @@
                                 <span class="difficulty">Beginner</span>
                             </button>
 
-                            <button class="topic-card" onclick="loadTopic('control')">
+                            <button class="topic-card" data-quiz-action="topic" data-topic="control">
                                 <div class="topic-icon control">
                                     <i class="fas fa-code-branch"></i>
                                 </div>
@@ -269,7 +269,7 @@
                                 <span class="difficulty">Intermediate</span>
                             </button>
 
-                            <button class="topic-card" onclick="loadTopic('functions')">
+                            <button class="topic-card" data-quiz-action="topic" data-topic="functions">
                                 <div class="topic-icon functions">
                                     <i class="fas fa-cogs"></i>
                                 </div>
@@ -278,7 +278,7 @@
                                 <span class="difficulty">Intermediate</span>
                             </button>
 
-                            <button class="topic-card" onclick="loadTopic('oop')">
+                            <button class="topic-card" data-quiz-action="topic" data-topic="oop">
                                 <div class="topic-icon oop">
                                     <i class="fas fa-cube"></i>
                                 </div>
@@ -287,7 +287,7 @@
                                 <span class="difficulty">Advanced</span>
                             </button>
 
-                            <button class="topic-card" onclick="loadTopic('files')">
+                            <button class="topic-card" data-quiz-action="topic" data-topic="files">
                                 <div class="topic-icon files">
                                     <i class="fas fa-file-alt"></i>
                                 </div>
@@ -296,7 +296,7 @@
                                 <span class="difficulty">Intermediate</span>
                             </button>
 
-                            <button class="topic-card" onclick="loadTopic('exceptions')">
+                            <button class="topic-card" data-quiz-action="topic" data-topic="exceptions">
                                 <div class="topic-icon exceptions">
                                     <i class="fas fa-exclamation-triangle"></i>
                                 </div>
@@ -307,7 +307,7 @@
                         </div>
 
                         <div style="text-align: center; margin-top: 2rem;">
-                            <button class="secondary-btn" onclick="showProgress()" style="margin-bottom: 1rem;">
+                            <button class="secondary-btn" data-quiz-action="progress" style="margin-bottom: 1rem;">
                                 <i class="fas fa-chart-line"></i> View Progress
                             </button>
                             <br>
@@ -335,6 +335,6 @@
     </footer>
 
     <script src="quiz-data.js"></script>
-    <script src="quiz.js"></script>
+    <script src="quiz.js?v=20261027-1"></script>
 </body>
 </html>

@@ -15,6 +15,7 @@ class QuizManager {
     initializeQuiz() {
         // Initialize navigation
         this.initNavigation();
+        this.initActions();
         
         // Initialize loading indicator
         this.createLoadingIndicator();
@@ -36,6 +37,23 @@ class QuizManager {
                 }
             });
         }
+    }
+
+    initActions() {
+        document.addEventListener('click', (event) => {
+            const control = event.target.closest?.('[data-quiz-action]');
+            if (!control || control.disabled) return;
+            switch (control.dataset.quizAction) {
+                case 'start': this.startQuiz(); break;
+                case 'language': this.selectLanguage(control.dataset.language); break;
+                case 'back-start': this.goBackToStart(); break;
+                case 'back-languages': this.goBackToLanguages(); break;
+                case 'topic': this.loadTopic(control.dataset.topic); break;
+                case 'progress': this.showProgress(); break;
+                case 'retake': this.retakeQuiz(); break;
+                case 'topics': this.goToTopics(); break;
+            }
+        });
     }
 
     createLoadingIndicator() {
@@ -327,7 +345,7 @@ class QuizManager {
         question.options.forEach((option, index) => {
             const optionElement = document.createElement('div');
             optionElement.className = 'option';
-            optionElement.onclick = (event) => this.selectOption(topic, questionIndex, index, event);
+            optionElement.addEventListener('click', (event) => this.selectOption(topic, questionIndex, index, event));
             
             optionElement.innerHTML = `
                 <i class="fas fa-circle"></i>
@@ -346,19 +364,19 @@ class QuizManager {
         
         const backBtn = document.createElement('button');
         backBtn.className = 'quiz-btn secondary';
-        backBtn.onclick = () => this.confirmBackToTopics();
+        backBtn.addEventListener('click', () => this.confirmBackToTopics());
         backBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Topics';
         
         const prevBtn = document.createElement('button');
         prevBtn.className = 'quiz-btn secondary';
-        prevBtn.onclick = () => this.previousQuestion(topic);
+        prevBtn.addEventListener('click', () => this.previousQuestion(topic));
         prevBtn.disabled = questionIndex === 0;
         prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Previous';
         
         const nextBtn = document.createElement('button');
         nextBtn.className = 'quiz-btn';
         nextBtn.id = 'next-btn';
-        nextBtn.onclick = () => this.nextQuestion(topic);
+        nextBtn.addEventListener('click', () => this.nextQuestion(topic));
         nextBtn.disabled = true;
         nextBtn.innerHTML = questionIndex === totalQuestions - 1 ? 
             '<i class="fas fa-flag-checkered"></i> Finish Quiz' : 
@@ -487,10 +505,10 @@ class QuizManager {
                 <div class="suggestions" id="quiz-suggestions"></div>
 
                 <div class="result-actions">
-                    <button class="quiz-btn" onclick="quizManager.retakeQuiz()">
+                    <button class="quiz-btn" data-quiz-action="retake">
                         <i class="fas fa-redo"></i> Retake Quiz
                     </button>
-                    <button class="quiz-btn secondary" onclick="quizManager.goToTopics()">
+                    <button class="quiz-btn secondary" data-quiz-action="topics">
                         <i class="fas fa-list"></i> Choose Another Topic
                     </button>
                 </div>
@@ -694,11 +712,11 @@ class QuizManager {
         const cancelBtn = modal.querySelector('.secondary');
         const confirmBtn = modal.querySelector('.quiz-btn:not(.secondary)');
         
-        cancelBtn.onclick = () => modal.remove();
-        confirmBtn.onclick = () => {
+        cancelBtn.addEventListener('click', () => modal.remove());
+        confirmBtn.addEventListener('click', () => {
             modal.remove();
             onConfirm();
-        };
+        });
         
         document.body.appendChild(modal);
     }
@@ -735,12 +753,3 @@ class QuizManager {
 document.addEventListener('DOMContentLoaded', () => {
     window.quizManager = new QuizManager();
 });
-
-// Global function assignments for HTML onclick handlers (legacy support)
-window.startQuiz = () => window.quizManager?.startQuiz();
-window.selectLanguage = (lang) => window.quizManager?.selectLanguage(lang);
-window.goBackToStart = () => window.quizManager?.goBackToStart();
-window.goBackToLanguages = () => window.quizManager?.goBackToLanguages();
-window.showProgress = () => window.quizManager?.showProgress();
-window.loadTopic = (topic) => window.quizManager?.loadTopic(topic);
-window.closeQuiz = () => window.quizManager?.closeQuiz();

@@ -22,6 +22,7 @@ class PortfolioManager {
         this.initNavigation();
         this.initScrollEffects();
         this.initMaintenanceButtons();
+        this.initNoticeButtons();
         this.initContactForm();
         this.initNavigationHighlighting();
     }
@@ -102,6 +103,15 @@ class PortfolioManager {
             button.addEventListener('click', (event) => {
                 event.preventDefault();
                 this.showNotification('This project is currently in maintenance.', 'info');
+            });
+        });
+    }
+
+    initNoticeButtons() {
+        document.querySelectorAll('[data-notice]').forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                this.showNotification(button.dataset.notice, 'info');
             });
         });
     }

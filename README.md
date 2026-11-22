@@ -36,6 +36,10 @@ portfolio/
 ├── gharbato-admin.css            # Admin console styling
 ├── gharbato-admin.js             # Admin console logic (Firebase Auth + Realtime Database REST)
 ├── gharbato-admin-config.js      # Public Firebase web config for the admin console
+├── gharbato-share.html           # Shared-listing landing page (static fallback)
+├── gharbato-share.css            # Styling for the shared-listing page
+├── gharbato-share.js             # Renders SharedProperties data on the fallback page
+├── .well-known/assetlinks.json   # Android App Links verification for /p/* links
 ├── Images/             # Portrait, project artwork, app logos, and favicon
 └── tests/              # Admin console regression tests
 ```
@@ -55,6 +59,43 @@ The web key is restricted to Identity Toolkit (sign-in) and Token Service
 (session refresh), with production and the documented local development
 referrers allowed. The admin console is available by its direct URL and is not
 linked from the public homepage.
+
+## GharBato share links
+
+App users share a listing as `https://manjilbasnet.com.np/p/<propertyKey>`.
+The link is readable by people who do not have the app, and opens the app for
+users who do (Android App Links).
+
+How the pieces fit:
+
+1. `SharedProperties/<key>` in the Realtime Database is the only public listing
+   node. It holds a whitelisted projection (no owner e-mail, contact details,
+   viewer list or exact coordinates) and is readable by anyone, writable only
+   by the admin UID.
+2. The admin console writes that projection whenever it loads listings and on
+   approve / reject / delete (see `syncSharedProperties` in
+   `gharbato-admin.js`). The Listings page also has a **Sync share links**
+   button. Approval makes a link live, rejection or deletion removes it.
+3. `/p/*` is served by the `gharbato-share` Worker
+   (`GharBato/share-worker/`), which renders the page with Open Graph tags so
+   WhatsApp, Telegram and Viber show a photo, title and price. Attach the
+   route `manjilbasnet.com.np/p/*` to that Worker in Cloudflare; the rest of
+   the domain stays on GitHub Pages.
+4. `gharbato-share.html?id=<key>` is the static fallback for when the Worker is
+   not deployed. It renders the same data in the browser, without rich link
+   previews.
+5. `.well-known/assetlinks.json` verifies the App Link for the release
+   (`com.gharbato.nepal.mobile`) and debug (`com.example.gharbato`) packages.
+
+Deploy order matters: publish the rules (adding `SharedProperties` and making
+`Property` reads require sign-in), open the admin console once so existing
+approved listings are published, then deploy the Worker and add the route.
+Verify with `curl -i https://manjilbasnet.com.np/p/<key>` and
+`curl -s https://manjilbasnet.com.np/v1/public/property/<key>`.
+
+When the Google Play listing goes live, set `PLAY_STORE_LIVE = "true"` in
+`share-worker/wrangler.toml` and `playStoreLive: true` in `gharbato-share.js`
+so the call-to-action points at the store instead of the project section.
 
 New KYC documents are encrypted with AES-256-GCM before upload. Only the owner
 and dedicated admin can read their decryption keys from Firebase. The admin

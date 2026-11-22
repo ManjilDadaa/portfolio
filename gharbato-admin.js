@@ -16,6 +16,7 @@
         busy: false,
         loadError: '',
         properties: {},
+        shared: {},
         users: {},
         reports: {},
         userReports: {},
@@ -29,10 +30,26 @@
         kycImageGeneration: 0,
         kycAbortController: null,
         sessionGeneration: 0,
+        loadedAt: 0,
+        refreshTimer: null,
+        globalResults: [],
+        globalFocus: -1,
         ui: {
             listingStatus: 'PENDING',
             listingQuery: '',
+            listingMarket: '',
+            listingSort: 'newest',
+            selected: {},
             kycStatus: 'Pending',
+            kycQuery: '',
+            kycSort: 'newest',
+            reportTab: 'listing',
+            reportStatus: 'PENDING',
+            reportSort: 'newest',
+            reportQuery: '',
+            userFilter: 'all',
+            userQuery: '',
+            supportQuery: '',
             deleteTab: 'rejected',
             deleteQuery: '',
             searchQuery: ''
@@ -40,6 +57,72 @@
     };
 
     var memorySession = null;
+    var PREF_KEY = 'gharbato-admin-prefs-v1';
+
+    function readPrefs() {
+        try {
+            var raw = window.localStorage ? window.localStorage.getItem(PREF_KEY) : null;
+            var parsed = raw ? JSON.parse(raw) : null;
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function writePrefs(patch) {
+        try {
+            if (!window.localStorage) return;
+            var next = Object.assign(readPrefs(), patch);
+            window.localStorage.setItem(PREF_KEY, JSON.stringify(next));
+        } catch (error) {
+            // Preferences are a convenience; unavailable storage is fine.
+        }
+    }
+
+    var SUN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+    var MOON_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13.4A8.6 8.6 0 1 1 10.6 3.5a6.8 6.8 0 0 0 9.9 9.9Z"/></svg>';
+
+    function systemPrefersDark() {
+        return typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    function currentTheme() {
+        var root = document.documentElement;
+        var attr = root && root.getAttribute ? root.getAttribute('data-theme') : '';
+        return attr === 'dark' ? 'dark' : 'light';
+    }
+
+    function updateThemeButton() {
+        var dark = currentTheme() === 'dark';
+        var buttons = document.querySelectorAll('[data-action="toggle-theme"]');
+        for (var i = 0; i < buttons.length; i += 1) {
+            buttons[i].innerHTML = dark ? SUN_ICON : MOON_ICON;
+            buttons[i].setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+            buttons[i].title = dark ? 'Switch to light theme' : 'Switch to dark theme';
+        }
+    }
+
+    function applyTheme(theme, persist) {
+        var root = document.documentElement;
+        if (!root || !root.setAttribute) return;
+        var resolved = theme === 'system' ? (systemPrefersDark() ? 'dark' : 'light')
+            : (theme === 'dark' ? 'dark' : 'light');
+        root.setAttribute('data-theme', resolved);
+        if (persist !== false) writePrefs({ theme: theme });
+        updateThemeButton();
+    }
+
+    function toggleTheme() {
+        applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+    }
+
+    (function restorePrefs() {
+        var prefs = readPrefs();
+        if (prefs.listingSort) state.ui.listingSort = prefs.listingSort;
+        if (prefs.kycSort) state.ui.kycSort = prefs.kycSort;
+        if (prefs.userFilter) state.ui.userFilter = prefs.userFilter;
+    }());
 
     function $(selector, root) {
         return (root || document).querySelector(selector);
@@ -252,6 +335,97 @@
         return '<span class="badge ' + (classes[value] || 'badge-neutral') + '">' + esc(labels[value] || status || 'Unknown') + '</span>';
     }
 
+    function timeAgo(timestamp) {
+        var ts = Number(timestamp || 0);
+        if (!ts) return '—';
+        var diff = Date.now() - ts;
+        if (diff < 0) diff = 0;
+        var minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return 'just now';
+        if (minutes < 60) return minutes + 'm ago';
+        var hours = Math.floor(minutes / 60);
+        if (hours < 24) return hours + 'h ago';
+        var days = Math.floor(hours / 24);
+        if (days < 30) return days + 'd ago';
+        var months = Math.floor(days / 30);
+        if (months < 12) return months + 'mo ago';
+        return Math.floor(months / 12) + 'y ago';
+    }
+
+    function hoursSince(timestamp) {
+        var ts = Number(timestamp || 0);
+        if (!ts) return 0;
+        return (Date.now() - ts) / 3600000;
+    }
+
+    function userList() {
+        return Object.keys(state.users).map(function (uid) {
+            var user = state.users[uid] || {};
+            return Object.assign(displayUser(uid), {
+                createdAt: Number(user.createdAt || user.joinedAt || 0),
+                lastActive: Number(user.lastActive || user.lastLogin || user.lastSeen || 0),
+                phone: user.phoneNo || ''
+            });
+        }).sort(function (a, b) {
+            return String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' });
+        });
+    }
+
+    function listingsForUser(uid) {
+        return propertyList().filter(function (property) { return property.ownerId === uid; });
+    }
+
+    function reportsForUser(uid) {
+        return Object.keys(state.userReports)
+            .map(function (key) { return state.userReports[key]; })
+            .filter(function (report) { return report && report.reportedUserId === uid; });
+    }
+
+    function kycForUser(uid) {
+        return Object.keys(state.kyc)
+            .map(function (key) { return Object.assign({ _key: key }, state.kyc[key]); })
+            .filter(function (submission) { return submission && submission.userId === uid; })
+            .sort(function (a, b) { return Number(b.submittedAt || 0) - Number(a.submittedAt || 0); });
+    }
+
+    function supportUnread(thread) {
+        var messages = thread && thread.messages ? thread.messages : [];
+        var lastAdmin = -1;
+        messages.forEach(function (message, index) {
+            if (message.admin === true || message.senderId === 'admin') lastAdmin = index;
+        });
+        var unread = 0;
+        for (var i = lastAdmin + 1; i < messages.length; i += 1) {
+            if (!(messages[i].admin === true || messages[i].senderId === 'admin')) unread += 1;
+        }
+        return unread;
+    }
+
+    function unreadConversations() {
+        return supportThreads().filter(function (thread) { return supportUnread(thread) > 0; });
+    }
+
+    function setSyncStatus(kind, text) {
+        var el = $('#sync-status');
+        if (!el) return;
+        el.className = 'sync-status' + (kind ? ' is-' + kind : '');
+        el.textContent = text;
+    }
+
+    function updateSyncStatus() {
+        if (!state.session) return;
+        if (state.loadError) {
+            setSyncStatus('error', 'Refresh failed');
+            return;
+        }
+        if (!state.loadedAt) {
+            setSyncStatus('', 'Not loaded');
+            return;
+        }
+        var age = Date.now() - state.loadedAt;
+        setSyncStatus(age > 120000 ? 'stale' : 'live', 'Updated ' + timeAgo(state.loadedAt));
+    }
+
     /* -------------------- Session and API -------------------- */
 
     function jwtPayload(token) {
@@ -412,11 +586,20 @@
         return session.idToken;
     }
 
+    function delay(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
     async function dbRequest(path, options) {
         options = options || {};
+        var method = String(options.method || 'GET').toUpperCase();
+        var attempt = Number(options.attempt || 0);
         var token = options.token || await getToken();
         var url = DB_URL + '/' + path + '.json?auth=' + enc(token);
-        var init = { method: options.method || 'GET', cache: 'no-store' };
+        var init = { method: method, cache: 'no-store' };
+        if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+            init.signal = AbortSignal.timeout(20000);
+        }
         if (options.body !== undefined) {
             init.headers = { 'Content-Type': 'application/json' };
             init.body = JSON.stringify(options.body);
@@ -425,8 +608,18 @@
         try {
             response = await fetch(url, init);
         } catch (error) {
+            // Reads and idempotent writes survive a flaky connection; POSTs do not retry.
+            if (method !== 'POST' && attempt < 2) {
+                await delay(350 * (attempt + 1));
+                return dbRequest(path, Object.assign({}, options, { attempt: attempt + 1, token: token }));
+            }
             throw new Error('Network error. Check your connection.');
         }
+        if ((response.status === 429 || response.status >= 500) && method !== 'POST' && attempt < 2) {
+            await delay(400 * (attempt + 1));
+            return dbRequest(path, Object.assign({}, options, { attempt: attempt + 1, token: token }));
+        }
+        if (options.onProgress) options.onProgress(response.status);
         if (response.status === 401 && !options.retried) {
             var fresh = await forceRefreshToken();
             var retry = Object.assign({}, options, { token: fresh.idToken, retried: true });
@@ -475,7 +668,8 @@
             dbRequest('ReportedProperties'),
             dbRequest('user_reports'),
             dbRequest('KycSubmissions'),
-            dbRequest('DeletionHistory')
+            dbRequest('DeletionHistory'),
+            dbRequest('SharedProperties')
         ]);
         if (!state.session || generation !== state.sessionGeneration) return;
         var rawProperties = mapValues(results[0]);
@@ -488,6 +682,7 @@
         state.userReports = mapValues(results[3]);
         state.kyc = mapValues(results[4]);
         state.deletionHistory = mapValues(results[5]);
+        state.shared = mapValues(results[6]);
     }
 
     async function loadSupport() {
@@ -557,43 +752,162 @@
             '<span class="stat-label">' + esc(label) + '</span></button>';
     }
 
+    function kpi(label, count, view, tone, hint) {
+        return '<button type="button" class="stat ' + (tone ? 'is-' + tone : '') + '" data-action="nav" data-view="' + view + '">' +
+            '<span class="stat-value">' + esc(count) + '</span>' +
+            '<span class="stat-label">' + esc(label) + '</span>' +
+            (hint ? '<span class="stat-hint">' + esc(hint) + '</span>' : '') + '</button>';
+    }
+
+    function attentionRows() {
+        var properties = propertyList();
+        var pending = properties.filter(function (property) { return property.status === 'PENDING'; });
+        var openReports = pendingPropertyReports();
+        var reportedUsers = groupedUserReports();
+        var pendingKyc = Object.keys(state.kyc).filter(function (key) {
+            return state.kyc[key] && state.kyc[key].status === 'Pending';
+        });
+        var unread = unreadConversations();
+        var suspended = userList().filter(function (user) { return user.suspended; });
+        var oldest = pending.length ? pending[pending.length - 1] : null;
+        var rows = [];
+
+        if (pending.length) {
+            rows.push({
+                view: 'listings', tone: '',
+                title: pending.length + ' listing' + (pending.length === 1 ? '' : 's') + ' awaiting review',
+                detail: oldest ? 'Oldest: ' + (oldest.title || 'Untitled listing') + ' · ' + timeAgo(oldest.createdAt) : '',
+                count: pending.length
+            });
+        }
+        if (openReports.length || reportedUsers.length) {
+            rows.push({
+                view: 'reports', tone: 'is-danger',
+                title: (openReports.length + reportedUsers.length) + ' open report' + ((openReports.length + reportedUsers.length) === 1 ? '' : 's'),
+                detail: openReports.length + ' on listings · ' + reportedUsers.length + ' on accounts',
+                count: openReports.length + reportedUsers.length
+            });
+        }
+        if (pendingKyc.length) {
+            rows.push({
+                view: 'kyc', tone: '',
+                title: pendingKyc.length + ' identity check' + (pendingKyc.length === 1 ? '' : 's') + ' to verify',
+                detail: 'Oldest submitted ' + timeAgo(Math.min.apply(null, pendingKyc.map(function (key) {
+                    return Number(state.kyc[key].submittedAt || 0) || Date.now();
+                }))),
+                count: pendingKyc.length
+            });
+        }
+        if (unread.length) {
+            rows.push({
+                view: 'support', tone: 'is-danger',
+                title: unread.length + ' conversation' + (unread.length === 1 ? '' : 's') + ' waiting on a reply',
+                detail: 'Latest: ' + (unread[0].user.name || unread[0].uid),
+                count: unread.length
+            });
+        }
+        if (suspended.length) {
+            rows.push({
+                view: 'users', tone: '',
+                title: suspended.length + ' suspended account' + (suspended.length === 1 ? '' : 's'),
+                detail: 'Review active suspensions and expiries',
+                count: suspended.length
+            });
+        }
+        return rows;
+    }
+
+    function activityFeed(limit) {
+        var items = [];
+        propertyList().slice(0, 30).forEach(function (property) {
+            items.push({
+                ts: Number(property.createdAt || property.updatedAt || 0),
+                kind: 'listing',
+                title: (property.title || 'Untitled listing') + ' was submitted',
+                detail: ownerOf(property).name + ' · ' + priceLabel(property)
+            });
+        });
+        Object.keys(state.kyc).forEach(function (key) {
+            var submission = state.kyc[key];
+            if (!submission) return;
+            items.push({
+                ts: Number(submission.reviewedAt || submission.submittedAt || 0),
+                kind: 'kyc',
+                title: (submission.userName || submission.userEmail || 'A user') + ' — KYC ' + String(submission.status || 'submitted').toLowerCase(),
+                detail: 'Identity verification'
+            });
+        });
+        Object.keys(state.reports).forEach(function (key) {
+            var report = state.reports[key];
+            if (!report) return;
+            items.push({
+                ts: Number(report.reportedAt || 0),
+                kind: 'report',
+                title: 'Listing reported: ' + (report.propertyTitle || report.propertyId || 'Listing'),
+                detail: report.reportReason || 'Reported by a user'
+            });
+        });
+        Object.keys(state.userReports).forEach(function (key) {
+            var report = state.userReports[key];
+            if (!report) return;
+            items.push({
+                ts: Number(report.timestamp || 0),
+                kind: 'report',
+                title: 'Account reported: ' + (displayUser(report.reportedUserId).name),
+                detail: report.reason || 'Reported by a user'
+            });
+        });
+        Object.keys(state.deletionHistory).forEach(function (key) {
+            var record = state.deletionHistory[key];
+            if (!record) return;
+            items.push({
+                ts: Number(record.deletedTimestamp || 0),
+                kind: 'listing',
+                title: 'Listing deleted: ' + (record.propertyTitle || 'Listing'),
+                detail: 'by ' + (record.deletedBy || 'Admin')
+            });
+        });
+        return items.filter(function (item) { return item.ts > 0; })
+            .sort(function (a, b) { return b.ts - a.ts; })
+            .slice(0, limit || 8);
+    }
+
     function overviewView() {
         var properties = propertyList();
         var pending = properties.filter(function (property) { return property.status === 'PENDING'; });
-        var reports = pendingPropertyReports();
-        var users = groupedUserReports();
-        var pendingKyc = Object.keys(state.kyc).filter(function (key) {
-            return state.kyc[key] && state.kyc[key].status === 'Pending';
-        }).length;
-        var threads = supportThreads().length;
+        var approved = properties.filter(function (property) { return property.status === 'APPROVED'; });
+        var rows = attentionRows();
+        var feed = activityFeed(9);
 
-        var recentPending = pending.slice(0, 5).map(function (property) {
-            var owner = ownerOf(property);
-            return '<div class="panel-row"><div class="grow"><strong>' + esc(property.title || 'Untitled listing') + '</strong>' +
-                '<span>' + esc(owner.name) + ' · ' + esc(fmtTs(property.createdAt)) + '</span></div>' +
-                badge(property.status) + '</div>';
+        var attention = rows.map(function (row) {
+            return '<button type="button" class="attention-item" data-action="nav" data-view="' + esc(row.view) + '">' +
+                '<span class="attention-dot ' + esc(row.tone) + '"></span>' +
+                '<span class="grow"><strong>' + esc(row.title) + '</strong><span>' + esc(row.detail) + '</span></span>' +
+                '<span class="attention-count">' + esc(row.count) + ' →</span></button>';
         }).join('');
 
-        var recentReports = reports.slice(0, 5).map(function (report) {
-            return '<div class="panel-row"><div class="grow"><strong>' + esc(report.propertyTitle || 'Listing') + '</strong>' +
-                '<span>' + esc(report.reportReason || 'Reported listing') + ' · ' + esc(fmtTs(report.reportedAt)) + '</span></div>' +
-                '<span class="badge badge-pending">Report</span></div>';
-        }).join('');
+        var timeline = feed.length ? '<div class="timeline">' + feed.map(function (item) {
+            return '<div class="timeline-item" data-kind="' + esc(item.kind) + '">' +
+                '<span class="timeline-dot"></span>' +
+                '<div class="timeline-body"><strong>' + esc(item.title) + '</strong>' +
+                '<span>' + esc(item.detail) + ' · ' + esc(timeAgo(item.ts)) + '</span></div></div>';
+        }).join('') + '</div>' : '<p class="muted small">No recent activity.</p>';
 
-        return '<section class="page-head"><div><h1>Overview</h1><p>Everything that needs attention across GharBato.</p></div></section>' +
+        return '<section class="page-head"><div><h1>Overview</h1><p>Everything that needs attention across GharBato.</p></div>' +
+            '<div class="filters"><button type="button" class="btn btn-ghost btn-small" data-action="refresh">Refresh data</button></div></section>' +
             '<div class="stat-grid">' +
-            statButton('listings', 'Pending listings', pending.length, 'is-warn') +
-            statButton('reports', 'Open reports', reports.length + users.length, 'is-danger') +
-            statButton('kyc', 'Pending KYC', pendingKyc, 'is-good') +
-            statButton('support', 'Support conversations', threads, '') +
+            kpi('Pending listings', pending.length, 'listings', 'is-warn', pending.length ? 'Oldest ' + timeAgo(pending[pending.length - 1].createdAt) : 'Queue is clear') +
+            kpi('Open reports', pendingPropertyReports().length + groupedUserReports().length, 'reports', 'is-danger', 'Listings and accounts') +
+            kpi('Pending KYC', Object.keys(state.kyc).filter(function (key) { return state.kyc[key] && state.kyc[key].status === 'Pending'; }).length, 'kyc', '', 'Identity documents') +
+            kpi('Unread support', unreadConversations().length, 'support', '', supportThreads().length + ' total conversations') +
+            kpi('Live listings', approved.length, 'listings', 'is-good', 'Visible in the app') +
+            kpi('Accounts', Object.keys(state.users).length, 'users', '', 'Registered users') +
             '</div>' +
             '<div class="panel-grid">' +
-            '<section class="panel"><h2>Newest pending listings</h2><div class="panel-list">' +
-            (recentPending || '<p class="muted small">Nothing waiting for review.</p>') +
-            '</div></section>' +
-            '<section class="panel"><h2>Latest reports</h2><div class="panel-list">' +
-            (recentReports || '<p class="muted small">No open reports.</p>') +
-            '</div></section>' +
+            '<section class="panel"><h2>Needs attention</h2>' +
+            (attention ? '<div class="attention-list">' + attention + '</div>' : '<p class="muted small">Nothing is waiting for review. 🎉</p>') +
+            '</section>' +
+            '<section class="panel"><h2>Recent activity</h2>' + timeline + '</section>' +
             '</div>';
     }
 
@@ -655,10 +969,18 @@
         var media = image
             ? imgTag(image, property.title || 'Property photo', '')
             : '<span class="placeholder">No photo</span>';
-        return '<article class="listing-card">' +
-            '<div class="listing-media">' + media + '</div>' +
+        var selected = !!(options.selectable && state.ui.selected[key]);
+        var pick = options.selectable
+            ? '<span class="listing-select"><input class="pick" type="checkbox" aria-label="Select ' + esc(property.title || 'listing') + '"' +
+              ' data-action="select-listing" data-key="' + esc(key) + '"' + (selected ? ' checked' : '') + '></span>'
+            : '';
+        var age = options.selectable && hoursSince(property.createdAt) >= 24
+            ? '<span class="age-flag">' + esc(Math.floor(hoursSince(property.createdAt) / 24)) + 'd waiting</span>'
+            : '';
+        return '<article class="listing-card' + (selected ? ' is-selected' : '') + '">' +
+            '<div class="listing-media">' + pick + media + '</div>' +
             '<div class="listing-body">' +
-            '<div class="row-between"><h3>' + esc(property.title || 'Untitled listing') + '</h3>' + (options.status === false ? '' : badge(property.status)) + '</div>' +
+            '<div class="row-between"><h3>' + esc(property.title || 'Untitled listing') + age + '</h3>' + (options.status === false ? '' : badge(property.status)) + '</div>' +
             '<p class="meta">' + esc(price) + ' · ' + esc(property.propertyType || 'Property') + ' · ' + esc(property.location || 'No location') + '</p>' +
             '<div class="owner">' + avatarHtml(owner.image, owner.name) +
             '<div class="owner-text"><strong>' + esc(owner.name) + '</strong><span>' + esc(owner.email || 'No email') + '</span></div></div>' +
@@ -666,23 +988,71 @@
             '</div></article>';
     }
 
-    function renderListingResults() {
-        var container = $('#listing-results');
-        if (!container) return;
+    function selectedKeys() {
+        return Object.keys(state.ui.selected).filter(function (key) { return state.ui.selected[key]; });
+    }
+
+    function matchesQuery(property, query) {
+        if (!query) return true;
+        var owner = ownerOf(property);
+        return [property.title, property.location, property.developer, property.propertyType, property.marketType,
+            property._key, property.id, owner.name, owner.email]
+            .join(' ').toLowerCase().indexOf(query) !== -1;
+    }
+
+    function priceValue(property) {
+        var number = Number(String(property && property.price != null ? property.price : '').replace(/[^\d.]/g, ''));
+        return isFinite(number) ? number : 0;
+    }
+
+    function visibleListings() {
         var query = state.ui.listingQuery.trim().toLowerCase();
         var items = propertyList().filter(function (property) {
             return property.status === state.ui.listingStatus;
         }).filter(function (property) {
-            if (!query) return true;
-            var owner = ownerOf(property);
-            return [property.title, property.location, property.developer, property.propertyType, owner.name, owner.email]
-                .join(' ').toLowerCase().indexOf(query) !== -1;
+            if (state.ui.listingMarket && String(property.marketType || '').toLowerCase() !== state.ui.listingMarket) return false;
+            return matchesQuery(property, query);
         });
+        var sort = state.ui.listingSort;
+        items.sort(function (a, b) {
+            if (sort === 'oldest') return Number(a.createdAt || 0) - Number(b.createdAt || 0);
+            if (sort === 'price') return priceValue(b) - priceValue(a);
+            if (sort === 'title') return String(a.title || '').localeCompare(String(b.title || ''));
+            return Number(b.createdAt || b.updatedAt || 0) - Number(a.createdAt || a.updatedAt || 0);
+        });
+        return items;
+    }
+
+    function updateBulkBar() {
+        var bar = $('#bulk-bar');
+        var count = selectedKeys().length;
+        if (bar) {
+            bar.hidden = count === 0;
+            var label = $('#bulk-count');
+            if (label) label.textContent = count + ' selected';
+        }
+        var all = $('#select-all');
+        if (all) {
+            var visible = visibleListings();
+            all.checked = visible.length > 0 && visible.every(function (property) { return state.ui.selected[property._key]; });
+        }
+    }
+
+    function renderListingResults() {
+        var container = $('#listing-results');
+        if (!container) return;
+        var items = visibleListings();
         var html = items.map(function (property) {
             var key = property._key;
-            return propertyCard(property, key, { actions: state.ui.listingStatus === 'PENDING' });
+            return propertyCard(property, key, {
+                actions: state.ui.listingStatus === 'PENDING',
+                selectable: state.ui.listingStatus === 'PENDING'
+            });
         }).join('');
         container.innerHTML = html || '<div class="empty">No ' + esc(state.ui.listingStatus.toLowerCase()) + ' listings match this view.</div>';
+        var summary = $('#listing-summary');
+        if (summary) summary.textContent = items.length + ' shown';
+        updateBulkBar();
     }
 
     function listingsView() {
@@ -698,39 +1068,313 @@
             return '<button type="button" class="seg' + active + '" data-action="listing-status" data-status="' + status + '">' +
                 label + '<span class="seg-count">' + counts[status] + '</span></button>';
         }).join('');
-        return '<section class="page-head"><div><h1>Listings</h1><p>Review, approve, and track every listing.</p></div></section>' +
+        var markets = ['', 'sale', 'rent', 'book'].map(function (value) {
+            var label = value ? value.charAt(0).toUpperCase() + value.slice(1) : 'All markets';
+            return '<option value="' + value + '"' + (state.ui.listingMarket === value ? ' selected' : '') + '>' + label + '</option>';
+        }).join('');
+        var sorts = [['newest', 'Newest first'], ['oldest', 'Oldest first'], ['price', 'Highest price'], ['title', 'Title A–Z']]
+            .map(function (option) {
+                return '<option value="' + option[0] + '"' + (state.ui.listingSort === option[0] ? ' selected' : '') + '>' + option[1] + '</option>';
+            }).join('');
+        var selectable = state.ui.listingStatus === 'PENDING';
+        return '<section class="page-head"><div><h1>Listings</h1><p>Review, approve, and track every listing.</p></div>' +
+            '<div class="page-actions"><button type="button" class="btn btn-ghost btn-small" data-action="sync-share-links">Sync share links</button></div></section>' +
             '<div class="toolbar"><div class="search"><input id="listing-search" type="search" placeholder="Search title, owner, location…" value="' + esc(state.ui.listingQuery) + '"></div>' +
             '<div class="segmented">' + tabs + '</div></div>' +
+            '<div class="toolbar"><div class="filters">' +
+            (selectable ? '<label class="filter-label" for="select-all"><input class="pick" type="checkbox" id="select-all" data-action="select-all-listings"> Select all</label>' : '') +
+            '<span class="filter-label">Market</span><select id="listing-market" aria-label="Filter by market">' + markets + '</select>' +
+            '<span class="filter-label">Sort</span><select id="listing-sort" aria-label="Sort listings">' + sorts + '</select>' +
+            '</div><span class="muted small" id="listing-summary"></span></div>' +
+            '<div class="bulkbar" id="bulk-bar" hidden><strong id="bulk-count">0 selected</strong><span class="spacer"></span>' +
+            '<button type="button" class="btn btn-primary btn-small" data-action="bulk-approve">Approve selected</button>' +
+            '<button type="button" class="btn btn-danger btn-small" data-action="bulk-reject">Reject selected</button>' +
+            '<button type="button" class="btn btn-ghost btn-small" data-action="bulk-clear">Clear</button></div>' +
             '<div class="stack" id="listing-results"></div>';
     }
 
-    function reportCard(report) {
-        var propertyId = report.propertyId;
-        var image = imageUrl(report.propertyImage);
-        var media = image
-            ? imgTag(image, report.propertyTitle || 'Reported listing', '')
-            : '<span class="placeholder">No photo</span>';
-        return '<article class="listing-card">' +
-            '<div class="listing-media">' + media + '</div>' +
-            '<div class="listing-body">' +
-            '<div class="row-between"><h3>' + esc(report.propertyTitle || 'Listing #' + propertyId) + '</h3>' +
-            '<span class="badge badge-pending">Reported</span></div>' +
-            '<p class="meta">Owner: ' + esc(report.ownerName || 'Unknown') + ' · Reported ' + esc(fmtTs(report.reportedAt)) + '</p>' +
-            '<div class="reason-box"><strong>Reason</strong>' + esc(report.reportReason || 'No reason provided') +
-            (report.reportDetails ? '<br>' + esc(report.reportDetails) : '') + '</div>' +
-            '<div class="owner"><span class="avatar-fallback">' + esc(initials(report.reportedByName || 'Anonymous')) + '</span>' +
-            '<div class="owner-text"><strong>' + esc(report.reportedByName || 'Anonymous') + '</strong><span>Reporter</span></div></div>' +
-            '<div class="actions">' +
-            '<button type="button" class="btn btn-ghost btn-small" data-action="keep-report" data-property="' + esc(propertyId) + '">Keep listing</button>' +
-            '<button type="button" class="btn btn-danger btn-small" data-action="remove-report" data-property="' + esc(propertyId) + '">Remove listing</button>' +
-            '</div></div></article>';
+    function reportMatches(text, query) {
+        return !query || String(text || '').toLowerCase().indexOf(query) !== -1;
+    }
+
+    function allListingReportGroups() {
+        var grouped = {};
+        Object.keys(state.reports).forEach(function (key) {
+            var report = state.reports[key];
+            if (!report || report.propertyId == null) return;
+            var propertyId = String(report.propertyId);
+            if (!grouped[propertyId]) grouped[propertyId] = { propertyId: propertyId, reports: [], pending: 0 };
+            grouped[propertyId].reports.push(report);
+            if (report.status === 'PENDING') grouped[propertyId].pending += 1;
+        });
+        var groups = Object.keys(grouped).map(function (propertyId) {
+            var group = grouped[propertyId];
+            group.reports.sort(function (a, b) { return Number(b.reportedAt || 0) - Number(a.reportedAt || 0); });
+            group.latest = group.reports[0] || {};
+            group.first = group.reports[group.reports.length - 1] || group.latest;
+            group.key = findPropertyKeyById(propertyId);
+            group.property = group.key ? state.properties[group.key] : null;
+            group.title = (group.property && group.property.title) || group.latest.propertyTitle || ('Listing #' + propertyId);
+            group.image = (group.property && propertyImage(group.property)) || group.latest.propertyImage || '';
+            group.ownerId = (group.property && group.property.ownerId) || group.latest.ownerId || '';
+            group.status = group.pending ? 'PENDING' : String(group.latest.status || 'PENDING');
+            return group;
+        });
+        groups.sort(function (a, b) {
+            if (state.ui.reportSort === 'reports') {
+                return (b.pending - a.pending) || (Number(b.latest.reportedAt || 0) - Number(a.latest.reportedAt || 0));
+            }
+            return Number(b.latest.reportedAt || 0) - Number(a.latest.reportedAt || 0);
+        });
+        return groups;
+    }
+
+    function visibleReportGroups() {
+        var query = state.ui.reportQuery.trim().toLowerCase();
+        return allListingReportGroups().filter(function (group) {
+            if (state.ui.reportStatus === 'PENDING' && group.pending === 0) return false;
+            if (state.ui.reportStatus === 'RESOLVED' && group.pending > 0) return false;
+            if (!query) return true;
+            return reportMatches([group.title, group.propertyId,
+                displayUser(group.ownerId).name,
+                group.reports.map(function (report) {
+                    return [report.reportReason, report.reportDetails, report.reportedByName].join(' ');
+                }).join(' ')
+            ].join(' '), query);
+        });
+    }
+
+    function reportGroupCard(group) {
+        var report = group.latest;
+        var image = imageUrl(group.image);
+        var ownerName = group.ownerId ? displayUser(group.ownerId).name : (report.ownerName || 'Unknown owner');
+        var isOpen = group.pending > 0;
+        var reasons = group.reports.map(function (item) {
+            var status = String(item.status || 'PENDING');
+            var suffix = status === 'PENDING' ? '' : (status === 'DISMISSED' ? ' · Dismissed' : ' · Reviewed');
+            return '<div class="report-reason">' +
+                '<div class="report-reason-head"><strong>' + esc(item.reportReason || 'No reason provided') + '</strong>' +
+                '<time>' + esc(timeAgo(item.reportedAt)) + '</time></div>' +
+                (item.reportDetails ? '<p>' + esc(item.reportDetails) + '</p>' : '') +
+                '<div class="report-by">' + esc(item.reportedByName || 'Anonymous') +
+                '<span class="dot"></span>' + esc(fmtTs(item.reportedAt)) + esc(suffix) + '</div></div>';
+        }).join('');
+        var actions = '<div class="report-actions">' +
+            (group.key ? '<button type="button" class="btn btn-ghost btn-small" data-action="view-report-listing" data-key="' + esc(group.key) + '">View listing</button>' : '') +
+            (group.ownerId ? '<button type="button" class="btn btn-ghost btn-small" data-action="view-report-user" data-uid="' + esc(group.ownerId) + '">Owner profile</button>' : '') +
+            (isOpen
+                ? '<button type="button" class="btn btn-ghost btn-small" data-action="keep-report" data-property="' + esc(group.propertyId) + '">Keep listing</button>' +
+                  '<button type="button" class="btn btn-danger btn-small" data-action="remove-report" data-property="' + esc(group.propertyId) + '">Remove listing</button>'
+                : '') +
+            '</div>';
+        return '<article class="report-card' + (isOpen ? '' : ' is-resolved') + '">' +
+            '<div class="report-thumb">' +
+            (image ? imgTag(image, group.title, '') : '<span class="placeholder">No photo</span>') +
+            (group.reports.length > 1 ? '<span class="report-count">' + group.reports.length + ' reports</span>' : '') +
+            '</div>' +
+            '<div class="report-body">' +
+            '<div class="report-head"><div class="grow"><h3>' + esc(group.title) + '</h3>' +
+            '<p class="report-sub">Owner <strong>' + esc(ownerName) + '</strong> · first reported ' + esc(timeAgo(group.first.reportedAt)) +
+            (group.reports.length > 1 ? ' · latest ' + esc(timeAgo(report.reportedAt)) : '') + '</p></div>' +
+            (isOpen ? '<span class="chip is-warn">' + group.pending + ' open</span>' : '<span class="chip">Resolved</span>') +
+            '</div>' +
+            '<div class="report-reasons">' + reasons + '</div>' +
+            actions + '</div></article>';
+    }
+
+    function openReportListing(key) {
+        var property = state.properties[key];
+        if (!property) {
+            toast('This listing is no longer in the database.', 'error');
+            return;
+        }
+        var owner = ownerOf(property);
+        var cover = imageUrl(propertyImage(property));
+        var body = '<div class="profile-head">' +
+            (cover ? '<img class="avatar" style="width:52px;height:52px;flex-basis:52px;border-radius:12px;object-fit:cover" src="' + esc(cover) + '" alt="">' : '') +
+            '<div class="grow"><strong>' + esc(property.title || 'Untitled listing') + '</strong>' +
+            '<span>' + esc(priceLabel(property)) + ' · ' + esc(property.location || 'No location') + '</span>' +
+            '<span>Owner: ' + esc(owner.name) + (owner.email ? ' · ' + esc(owner.email) : '') + '</span></div>' +
+            badge(property.status) + '</div>' +
+            propertyDetailsHtml(property).replace(' hidden>', '>');
+        openModal({
+            title: 'Reported listing',
+            bodyHtml: body,
+            confirmLabel: 'Close',
+            hideCancel: true,
+            onConfirm: function () { }
+        });
+    }
+
+    function reportResultsHtml() {
+        var query = state.ui.reportQuery.trim().toLowerCase();
+        if (state.ui.reportTab === 'user') {
+            var userGroups = groupedUserReports().filter(function (group) {
+                return reportMatches([group.user.name, group.user.email, group.uid,
+                    group.reports.map(function (report) { return report.reason; }).join(' ')].join(' '), query);
+            });
+            return userGroups.length ? '<div class="stack">' + userGroups.map(userReportCard).join('') + '</div>'
+                : '<div class="empty">No reported accounts match this view.</div>';
+        }
+        var groups = visibleReportGroups();
+        if (!groups.length) {
+            var message = query ? 'No reports match that search.'
+                : (state.ui.reportStatus === 'PENDING' ? 'No open listing reports. Everything is reviewed.'
+                    : 'No listing reports in this view.');
+            return '<div class="empty">' + esc(message) + '</div>';
+        }
+        return '<div class="stack">' + groups.map(reportGroupCard).join('') + '</div>';
+    }
+
+    function renderReportResults() {
+        var container = $('#report-results');
+        if (container) container.innerHTML = reportResultsHtml();
+        var summary = $('#report-summary');
+        if (summary) summary.innerHTML = reportSummaryHtml();
+    }
+
+    function reportSummaryHtml() {
+        var groups = allListingReportGroups();
+        var openReports = groups.reduce(function (sum, group) { return sum + group.pending; }, 0);
+        var openListings = groups.filter(function (group) { return group.pending > 0; }).length;
+        var resolved = groups.length - openListings;
+        var accounts = groupedUserReports();
+        return '<span class="chip' + (openReports ? ' is-warn' : '') + '">' + openReports + ' open report' + (openReports === 1 ? '' : 's') + '</span>' +
+            '<span class="chip">' + openListings + ' listing' + (openListings === 1 ? '' : 's') + ' affected</span>' +
+            '<span class="chip is-good">' + resolved + ' reviewed</span>' +
+            '<span class="chip' + (accounts.length ? ' is-danger' : '') + '">' + accounts.length + ' reported account' + (accounts.length === 1 ? '' : 's') + '</span>';
     }
 
     function reportsView() {
-        var reports = pendingPropertyReports();
-        return '<section class="page-head"><div><h1>Reported listings</h1><p>Reports filed by users, grouped by listing.</p></div></section>' +
-            (reports.length ? '<div class="stack">' + reports.map(reportCard).join('') + '</div>'
-                : '<div class="empty">No open listing reports.</div>');
+        var tab = state.ui.reportTab === 'user' ? 'user' : 'listing';
+        var groups = allListingReportGroups();
+        var openListings = groups.filter(function (group) { return group.pending > 0; }).length;
+        var openReports = groups.reduce(function (sum, group) { return sum + group.pending; }, 0);
+        var accounts = groupedUserReports();
+        var statusTabs = [['PENDING', 'Open'], ['RESOLVED', 'Resolved'], ['ALL', 'All']].map(function (option) {
+            return '<button type="button" class="seg' + (state.ui.reportStatus === option[0] ? ' is-active' : '') + '" data-action="report-status" data-status="' + option[0] + '">' + option[1] + '</button>';
+        }).join('');
+        return '<section class="page-head"><div><h1>Reports</h1><p>Review reports against listings and accounts, then keep, remove or resolve them.</p></div>' +
+            '<button type="button" class="btn btn-ghost btn-small" data-action="refresh">Refresh</button></section>' +
+            '<div class="report-summary" id="report-summary">' + reportSummaryHtml() + '</div>' +
+            '<div class="toolbar"><div class="segmented">' +
+            '<button type="button" class="seg' + (tab === 'listing' ? ' is-active' : '') + '" data-action="report-tab" data-tab="listing">Listings<span class="seg-count">' + openListings + '</span></button>' +
+            '<button type="button" class="seg' + (tab === 'user' ? ' is-active' : '') + '" data-action="report-tab" data-tab="user">Accounts<span class="seg-count">' + accounts.length + '</span></button>' +
+            '</div><div class="search"><input id="report-search" type="search" placeholder="Search title, owner, reason, reporter…" value="' + esc(state.ui.reportQuery) + '"></div></div>' +
+            (tab === 'listing'
+                ? '<div class="toolbar"><div class="report-filters"><div class="segmented">' + statusTabs + '</div>' +
+                  '<select id="report-sort" aria-label="Sort reports">' +
+                  '<option value="newest"' + (state.ui.reportSort === 'newest' ? ' selected' : '') + '>Newest first</option>' +
+                  '<option value="reports"' + (state.ui.reportSort === 'reports' ? ' selected' : '') + '>Most reported</option></select></div>' +
+                  '<span class="muted small">' + openReports + ' open report' + (openReports === 1 ? '' : 's') + ' across ' + openListings + ' listing' + (openListings === 1 ? '' : 's') + '</span></div>'
+                : '') +
+            '<div id="report-results">' + reportResultsHtml() + '</div>';
+    }
+
+    function userMatchesFilter(user, filter) {
+        if (filter === 'suspended') return user.suspended;
+        if (filter === 'reported') return reportsForUser(user.uid).length > 0;
+        if (filter === 'verified') return kycForUser(user.uid).some(function (submission) { return submission.status === 'Approved'; });
+        return true;
+    }
+
+    function usersView() {
+        var all = userList();
+        var query = state.ui.userQuery.trim().toLowerCase();
+        var filter = state.ui.userFilter;
+        var visible = all.filter(function (user) {
+            if (!userMatchesFilter(user, filter)) return false;
+            if (!query) return true;
+            return [user.name, user.email, user.uid, user.phone].join(' ').toLowerCase().indexOf(query) !== -1;
+        });
+        var counts = {
+            all: all.length,
+            suspended: all.filter(function (user) { return user.suspended; }).length,
+            reported: all.filter(function (user) { return reportsForUser(user.uid).length > 0; }).length,
+            verified: all.filter(function (user) {
+                return kycForUser(user.uid).some(function (submission) { return submission.status === 'Approved'; });
+            }).length
+        };
+        var tabs = [['all', 'All'], ['suspended', 'Suspended'], ['reported', 'Reported'], ['verified', 'KYC verified']]
+            .map(function (option) {
+                return '<button type="button" class="seg' + (filter === option[0] ? ' is-active' : '') + '" data-action="user-filter" data-filter="' + option[0] + '">' +
+                    option[1] + '<span class="seg-count">' + counts[option[0]] + '</span></button>';
+            }).join('');
+        var rows = visible.map(function (user) {
+            var listings = listingsForUser(user.uid);
+            var kyc = kycForUser(user.uid)[0];
+            var reports = reportsForUser(user.uid).length;
+            var status = user.suspended
+                ? '<span class="chip is-danger">Suspended</span>'
+                : '<span class="chip is-good">Active</span>';
+            var kycChip = kyc
+                ? '<span class="chip ' + (kyc.status === 'Approved' ? 'is-good' : kyc.status === 'Rejected' ? 'is-danger' : 'is-warn') + '">' + esc(kyc.status || 'Pending') + '</span>'
+                : '<span class="chip">None</span>';
+            return '<tr>' +
+                '<td><div class="table-user">' + avatarHtml(user.image, user.name) +
+                '<div class="grow"><strong>' + esc(user.name) + '</strong><span>' + esc(user.email || user.uid) + '</span></div></div></td>' +
+                '<td>' + status + (reports ? ' <span class="chip is-warn">' + reports + ' report' + (reports === 1 ? '' : 's') + '</span>' : '') + '</td>' +
+                '<td>' + listings.length + ' <span class="muted small">(' + listings.filter(function (property) { return property.status === 'APPROVED'; }).length + ' live)</span></td>' +
+                '<td>' + kycChip + '</td>' +
+                '<td class="row-actions"><button type="button" class="btn btn-ghost btn-small" data-action="open-user" data-uid="' + esc(user.uid) + '">View</button>' +
+                (user.suspended
+                    ? '<button type="button" class="btn btn-ghost btn-small" data-action="activate-user" data-uid="' + esc(user.uid) + '">Activate</button>'
+                    : '<button type="button" class="btn btn-danger btn-small" data-action="suspend-user" data-uid="' + esc(user.uid) + '">Suspend</button>') +
+                '</td></tr>';
+        }).join('');
+        var table = visible.length
+            ? '<div class="table-wrap"><table class="data-table"><thead><tr><th>Account</th><th>Status</th><th>Listings</th><th>KYC</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+            : '<div class="empty">No accounts match this view.</div>';
+        return '<section class="page-head"><div><h1>Users</h1><p>Every registered account, its listings, verification and moderation state.</p></div></section>' +
+            '<div class="toolbar"><div class="segmented">' + tabs + '</div>' +
+            '<div class="search"><input id="user-search" type="search" placeholder="Search name, email, phone, UID…" value="' + esc(state.ui.userQuery) + '"></div></div>' +
+            '<p class="muted small" style="margin-bottom:10px">Showing ' + visible.length + ' of ' + all.length + ' accounts</p>' +
+            table;
+    }
+
+    function openUserProfile(uid) {
+        var user = displayUser(uid);
+        var listings = listingsForUser(uid);
+        var reports = reportsForUser(uid);
+        var kyc = kycForUser(uid)[0];
+        var live = listings.filter(function (property) { return property.status === 'APPROVED'; }).length;
+        var pending = listings.filter(function (property) { return property.status === 'PENDING'; }).length;
+        var listingRows = listings.slice(0, 8).map(function (property) {
+            return '<div class="profile-row"><div class="grow"><strong>' + esc(property.title || 'Untitled listing') + '</strong>' +
+                '<span>' + esc(priceLabel(property)) + ' · ' + esc(property.location || 'No location') + '</span></div>' +
+                badge(property.status) + '</div>';
+        }).join('');
+        var body = '<div class="profile-head">' + avatarHtml(user.image, user.name) +
+            '<div class="grow"><strong>' + esc(user.name) + '</strong><span>' + esc(user.email || 'No email') + '</span>' +
+            '<span>' + esc(user.phone || 'No phone') + '</span></div>' +
+            (user.suspended ? badge('SUSPENDED') : badge('ACTIVE')) + '</div>' +
+            '<div class="profile-stats">' +
+            '<div class="profile-stat"><strong>' + listings.length + '</strong><span>Listings</span></div>' +
+            '<div class="profile-stat"><strong>' + live + '</strong><span>Live</span></div>' +
+            '<div class="profile-stat"><strong>' + pending + '</strong><span>In review</span></div>' +
+            '<div class="profile-stat"><strong>' + reports.length + '</strong><span>Reports</span></div>' +
+            '</div>' +
+            '<p class="muted small" style="margin-bottom:8px">UID <code>' + esc(uid) + '</code></p>' +
+            (kyc ? '<p class="muted small" style="margin-bottom:10px">KYC: ' + esc(kyc.status || 'Pending') + ' · ' + esc(kyc.documentType || 'Document') + '</p>' : '') +
+            (user.suspended ? '<div class="reason-box"><strong>Suspension</strong>' + esc(user.suspensionReason || 'No reason recorded') +
+                '<br>Until ' + esc(fmtTs(user.suspendedUntil)) + '</div>' : '') +
+            (reports.length ? '<div class="reason-box"><strong>Latest report</strong>' + esc(reports[0].reason || 'No reason') + '</div>' : '') +
+            '<div class="toolbar-title" style="margin:14px 0 8px"><h2>Listings</h2><span>' + listings.length + ' total</span></div>' +
+            (listingRows ? '<div class="profile-list">' + listingRows + '</div>' : '<p class="muted small">This account has no listings.</p>') +
+            '<div class="actions" style="margin-top:16px">' +
+            '<button type="button" class="btn btn-ghost btn-small" data-action="open-thread" data-uid="' + esc(uid) + '">Message</button>' +
+            (user.suspended
+                ? '<button type="button" class="btn btn-ghost btn-small" data-action="activate-user" data-uid="' + esc(uid) + '">Activate account</button>'
+                : '<button type="button" class="btn btn-danger btn-small" data-action="suspend-user" data-uid="' + esc(uid) + '">Suspend account</button>') +
+            '<button type="button" class="btn btn-ghost btn-small" data-action="notify-user" data-uid="' + esc(uid) + '">Send notification</button>' +
+            '</div>';
+        openModal({
+            title: 'Account',
+            bodyHtml: body,
+            confirmLabel: 'Close',
+            hideCancel: true,
+            onConfirm: function () { }
+        });
     }
 
     function userReportCard(group) {
@@ -739,27 +1383,28 @@
         var suspension = user.suspended
             ? '<p class="meta">Until ' + esc(fmtTs(user.suspendedUntil)) + (user.suspensionReason ? ' · ' + esc(user.suspensionReason) : '') + '</p>'
             : '';
+        var reasons = group.reports.map(function (report) {
+            return '<div class="report-reason">' +
+                '<div class="report-reason-head"><strong>' + esc(report.reason || 'No reason provided') + '</strong>' +
+                '<time>' + esc(timeAgo(report.timestamp)) + '</time></div>' +
+                '<div class="report-by">By ' + esc(displayUser(report.reporterId).name) +
+                '<span class="dot"></span>' + esc(fmtTs(report.timestamp)) + '</div></div>';
+        }).join('');
         return '<article class="listing-card" style="grid-template-columns:1fr">' +
             '<div class="listing-body">' +
             '<div class="row-between"><div class="owner" style="margin-top:0">' + avatarHtml(user.image, user.name) +
             '<div class="owner-text"><strong>' + esc(user.name) + '</strong><span>' + esc(user.email || user.uid) + '</span></div></div>' +
             statusBadge + '</div>' +
-            '<p class="meta">' + group.reports.length + ' report' + (group.reports.length === 1 ? '' : 's') + ' · Latest ' + esc(fmtTs(group.latest.timestamp)) + '</p>' +
-            '<div class="reason-box"><strong>Latest reason</strong>' + esc(group.latest.reason || 'No reason provided') + '</div>' +
+            '<p class="meta">' + group.reports.length + ' report' + (group.reports.length === 1 ? '' : 's') + ' · latest ' + esc(timeAgo(group.latest.timestamp)) + '</p>' +
+            '<div class="report-account-reports">' + reasons + '</div>' +
             suspension +
             '<div class="actions">' +
+            '<button type="button" class="btn btn-ghost btn-small" data-action="view-report-user" data-uid="' + esc(group.uid) + '">View account</button>' +
             (user.suspended
                 ? '<button type="button" class="btn btn-ghost btn-small" data-action="activate-user" data-uid="' + esc(group.uid) + '">Activate</button>'
                 : '<button type="button" class="btn btn-danger btn-small" data-action="suspend-user" data-uid="' + esc(group.uid) + '">Suspend</button>') +
-            '<button type="button" class="btn btn-ghost btn-small" data-action="resolve-user" data-uid="' + esc(group.uid) + '">Resolve reports</button>' +
+            '<button type="button" class="btn btn-ghost btn-small" data-action="resolve-user" data-uid="' + esc(group.uid) + '">Dismiss reports</button>' +
             '</div></div></article>';
-    }
-
-    function usersView() {
-        var groups = groupedUserReports();
-        return '<section class="page-head"><div><h1>Reported users</h1><p>Accounts flagged by users, grouped by account.</p></div></section>' +
-            (groups.length ? '<div class="stack">' + groups.map(userReportCard).join('') + '</div>'
-                : '<div class="empty">No reported users.</div>');
     }
 
     function kycCard(key, submission) {
@@ -886,23 +1531,71 @@
             return '<button type="button" class="seg' + active + '" data-action="kyc-status" data-status="' + status + '">' +
                 status + '<span class="seg-count">' + counts[status] + '</span></button>';
         }).join('');
-        var visible = submissions.filter(function (item) { return item.value.status === state.ui.kycStatus; });
         return '<section class="page-head"><div><h1>KYC verification</h1><p>Review identity documents submitted by users.</p></div></section>' +
-            '<div class="toolbar"><div class="segmented">' + tabs + '</div></div>' +
+            '<div class="toolbar"><div class="segmented">' + tabs + '</div>' +
+            '<div class="filters"><div class="search"><input id="kyc-search" type="search" placeholder="Search name, email, document…" value="' + esc(state.ui.kycQuery) + '"></div>' +
+            '<select id="kyc-sort" aria-label="Sort KYC submissions">' +
+            '<option value="newest"' + (state.ui.kycSort === 'newest' ? ' selected' : '') + '>Newest first</option>' +
+            '<option value="oldest"' + (state.ui.kycSort === 'oldest' ? ' selected' : '') + '>Oldest first</option></select></div></div>' +
+            '<div id="kyc-results">' + kycResultsHtml() + '</div>';
+    }
+
+    function kycVisible() {
+        var query = state.ui.kycQuery.trim().toLowerCase();
+        var visible = Object.keys(state.kyc).map(function (key) {
+            return { key: key, value: state.kyc[key] };
+        }).filter(function (item) { return item.value && typeof item.value === 'object'; })
+            .filter(function (item) { return item.value.status === state.ui.kycStatus; })
+            .filter(function (item) {
+                if (!query) return true;
+                return [item.value.userName, item.value.userEmail, item.value.documentType, item.key]
+                    .join(' ').toLowerCase().indexOf(query) !== -1;
+            });
+        visible.sort(function (a, b) {
+            return state.ui.kycSort === 'oldest'
+                ? Number(a.value.submittedAt || 0) - Number(b.value.submittedAt || 0)
+                : Number(b.value.submittedAt || 0) - Number(a.value.submittedAt || 0);
+        });
+        return visible;
+    }
+
+    function kycResultsHtml() {
+        var visible = kycVisible();
+        var oldest = visible.length ? timeAgo(Math.min.apply(null, visible.map(function (item) {
+            return Number(item.value.submittedAt || 0) || Date.now();
+        }))) : '—';
+        return '<p class="muted small" style="margin-bottom:10px">' + visible.length + ' submission' + (visible.length === 1 ? '' : 's') +
+            ' · oldest in this view: ' + esc(oldest) + '</p>' +
             (visible.length ? '<div class="stack">' + visible.map(function (item) { return kycCard(item.key, item.value); }).join('') + '</div>'
-                : '<div class="empty">No ' + esc(state.ui.kycStatus.toLowerCase()) + ' KYC submissions.</div>');
+                : '<div class="empty">No ' + esc(state.ui.kycStatus.toLowerCase()) + ' KYC submissions match this view.</div>');
+    }
+
+    function renderKycResults() {
+        var container = $('#kyc-results');
+        if (container) container.innerHTML = kycResultsHtml();
+        hydrateProtectedKycImages().catch(function (error) { toast(error.message, 'error'); });
     }
 
     function supportListHtml() {
         var threads = supportThreads();
-        if (!threads.length) return '<div class="empty">No support conversations yet.</div>';
-        return '<div class="thread-list">' + threads.map(function (thread) {
+        var query = state.ui.supportQuery.trim().toLowerCase();
+        var visible = threads.filter(function (thread) {
+            if (!query) return true;
+            return [thread.user.name, thread.user.email, thread.uid, thread.last.message]
+                .join(' ').toLowerCase().indexOf(query) !== -1;
+        });
+        if (!visible.length) {
+            return '<div class="empty">' + (threads.length ? 'No conversations match that search.' : 'No support conversations yet.') + '</div>';
+        }
+        return '<div class="thread-list">' + visible.map(function (thread) {
             var user = thread.user;
+            var unread = supportUnread(thread);
             return '<button type="button" class="thread" data-action="open-thread" data-uid="' + esc(thread.uid) + '">' +
                 avatarHtml(user.image, user.name) +
                 '<div class="grow"><strong>' + esc(user.name) + '</strong><span>' + esc(user.email || thread.uid) + '</span>' +
-                '<span>' + esc(thread.last.message || '') + '</span></div>' +
-                '<span class="muted small">' + esc(fmtTs(thread.last.timestamp)) + '</span></button>';
+                '<span class="thread-preview">' + esc(thread.last.message || '') + '</span></div>' +
+                (unread ? '<span class="thread-unread" title="Replies waiting">' + unread + '</span>' : '') +
+                '<span class="muted small">' + esc(timeAgo(thread.last.timestamp)) + '</span></button>';
         }).join('') + '</div>';
     }
 
@@ -912,16 +1605,29 @@
             var user = displayUser(uid);
             var presence = state.presence[uid];
             var online = presence && presence.online === true;
+            var replies = [
+                "Thanks for reaching out — I'm looking into this now.",
+                'Could you share a screenshot or the listing link?',
+                'This should be fixed in the latest app version. Please update and try again.',
+                'Your account has been reviewed and restored. Sorry for the trouble.'
+            ];
             return '<section class="page-head"><div><h1>Support</h1><p>Reply to the user directly from the web console.</p></div></section>' +
                 '<div class="chat-shell"><div class="chat-head">' +
                 '<button type="button" class="btn btn-ghost btn-small" data-action="close-thread">Back</button>' +
                 avatarHtml(user.image, user.name) +
                 '<div class="grow"><strong>' + esc(user.name) + '</strong><span id="chat-presence">' + esc(user.email || uid) + (online ? ' · Online' : ' · Offline') + '</span></div>' +
                 '</div><div class="chat-messages" id="chat-messages">' + messagesHtml(uid) + '</div>' +
-                '<div class="composer"><textarea id="chat-input" rows="1" placeholder="Write a reply…"></textarea>' +
-                '<button type="button" class="btn btn-primary" data-action="send-message">Send</button></div></div>';
+                '<div class="quick-replies">' + replies.map(function (text) {
+                    return '<button type="button" class="quick-reply" data-action="quick-reply" data-message="' + esc(text) + '">' + esc(text.length > 42 ? text.slice(0, 40) + '…' : text) + '</button>';
+                }).join('') + '</div>' +
+                '<div class="composer"><textarea id="chat-input" rows="1" placeholder="Write a reply…" maxlength="4000"></textarea>' +
+                '<button type="button" class="btn btn-primary" data-action="send-message">Send</button></div>' +
+                '<p class="composer-hint">Enter sends · Shift+Enter adds a line · Replies are delivered to the app inbox</p></div>';
         }
-        return '<section class="page-head"><div><h1>Support</h1><p>All conversations started from the app.</p></div></section>' +
+        var unread = unreadConversations().length;
+        return '<section class="page-head"><div><h1>Support</h1><p>' +
+            (unread ? unread + ' conversation' + (unread === 1 ? '' : 's') + ' waiting on a reply.' : 'All conversations are answered.') + '</p></div></section>' +
+            '<div class="toolbar"><div class="search"><input id="support-search" type="search" placeholder="Search name, email or message…" value="' + esc(state.ui.supportQuery) + '"></div></div>' +
             '<div id="support-list">' + supportListHtml() + '</div>';
     }
 
@@ -958,6 +1664,261 @@
         return '<section class="page-head"><div><h1>Search</h1><p>Find any listing regardless of status.</p></div></section>' +
             '<div class="toolbar"><div class="search"><input id="search-properties" type="search" placeholder="Search listings…" value="' + esc(state.ui.searchQuery) + '"></div></div>' +
             '<div class="stack" id="search-results">' + searchResultsHtml() + '</div>';
+    }
+
+    /* -------------------- Broadcast -------------------- */
+
+    function broadcastRecipients() {
+        var audience = $('#bc-audience');
+        var choice = audience ? audience.value : 'active';
+        var users = userList();
+        if (choice === 'single') {
+            var picked = $('#bc-user');
+            var uid = picked ? picked.value : '';
+            return uid ? users.filter(function (user) { return user.uid === uid; }) : [];
+        }
+        if (choice === 'all') return users;
+        return users.filter(function (user) { return !user.suspended; });
+    }
+
+    function broadcastView() {
+        var users = userList();
+        var active = users.filter(function (user) { return !user.suspended; });
+        var userOptions = users.map(function (user) {
+            return '<option value="' + esc(user.uid) + '">' + esc(user.name) + ' — ' + esc(user.email || user.uid) + '</option>';
+        }).join('');
+        return '<section class="page-head"><div><h1>Broadcast</h1><p>Send an in-app notification to one account or everyone.</p></div></section>' +
+            '<div class="broadcast-card">' +
+            '<div class="field-row"><div class="field"><label for="bc-audience">Audience</label>' +
+            '<select id="bc-audience">' +
+            '<option value="active">All active users (' + active.length + ')</option>' +
+            '<option value="all">Everyone, incl. suspended (' + users.length + ')</option>' +
+            '<option value="single">Single account</option></select></div>' +
+            '<div class="field"><label for="bc-type">Notification type</label>' +
+            '<select id="bc-type"><option value="system">System</option><option value="property">New listing</option>' +
+            '<option value="promotion">Promotion</option><option value="alert">Alert</option></select></div></div>' +
+            '<div class="field" id="bc-user-wrap" hidden><label for="bc-user">Account</label>' +
+            '<select id="bc-user">' + userOptions + '</select></div>' +
+            '<div class="field"><label for="bc-title">Title</label>' +
+            '<input id="bc-title" maxlength="120" placeholder="e.g. Weekend property picks">' +
+            '<span class="counter" id="bc-title-count">0 / 120</span></div>' +
+            '<div class="field"><label for="bc-message">Message</label>' +
+            '<textarea id="bc-message" maxlength="1000" placeholder="Write the notification body…"></textarea>' +
+            '<span class="counter" id="bc-message-count">0 / 1,000</span></div>' +
+            '<div class="audience-box" id="bc-audience-note">This will notify <strong>' + active.length + '</strong> accounts in their GharBato inbox.</div>' +
+            '<div class="actions"><button type="button" class="btn btn-primary" data-action="send-broadcast">Send notification</button></div>' +
+            '<p class="muted small" id="bc-progress"></p></div>';
+    }
+
+    function updateBroadcastCounters() {
+        var title = $('#bc-title');
+        var message = $('#bc-message');
+        var note = $('#bc-audience-note');
+        var audience = $('#bc-audience');
+        var wrap = $('#bc-user-wrap');
+        if (audience && wrap) wrap.hidden = audience.value !== 'single';
+        function paint(input, counterId, max) {
+            var counter = $('#' + counterId);
+            if (!input || !counter) return;
+            var length = String(input.value || '').length;
+            counter.textContent = length + ' / ' + max.toLocaleString('en-US');
+            counter.className = 'counter' + (length > max ? ' is-over' : '');
+        }
+        paint(title, 'bc-title-count', 120);
+        paint(message, 'bc-message-count', 1000);
+        if (note) {
+            var recipients = broadcastRecipients();
+            note.innerHTML = 'This will notify <strong>' + esc(recipients.length) + '</strong> account' +
+                (recipients.length === 1 ? '' : 's') + ' in their GharBato inbox.';
+        }
+    }
+
+    async function sendBroadcast() {
+        var title = String(($('#bc-title') || {}).value || '').trim();
+        var message = String(($('#bc-message') || {}).value || '').trim();
+        var type = String(($('#bc-type') || {}).value || 'system');
+        var recipients = broadcastRecipients();
+        if (!title) return toast('Enter a notification title.', 'error');
+        if (!message) return toast('Enter a notification message.', 'error');
+        if (title.length > 120) return toast('Keep the title under 120 characters.', 'error');
+        if (message.length > 1000) return toast('Keep the message under 1,000 characters.', 'error');
+        if (!recipients.length) return toast('Choose at least one recipient.', 'error');
+
+        openModal({
+            title: 'Send notification',
+            bodyHtml: '<p>Send <strong>' + esc(title) + '</strong> to <strong>' + recipients.length + '</strong> account' +
+                (recipients.length === 1 ? '' : 's') + '?</p>' +
+                '<div class="reason-box">' + esc(message) + '</div>' +
+                '<p class="muted small">Notifications appear in the app inbox. Suspended users are only included when you choose everyone.</p>',
+            confirmLabel: 'Send',
+            onConfirm: async function () {
+                var sent = 0;
+                var failed = 0;
+                var progress = $('#bc-progress');
+                for (var i = 0; i < recipients.length; i += 5) {
+                    var chunk = recipients.slice(i, i + 5);
+                    var results = await Promise.allSettled(chunk.map(function (user) {
+                        return createNotification(user.uid, title, message, type, '');
+                    }));
+                    results.forEach(function (result) {
+                        if (result.status === 'fulfilled') sent += 1;
+                        else failed += 1;
+                    });
+                    if (progress) progress.textContent = 'Sending… ' + Math.min(i + 5, recipients.length) + ' / ' + recipients.length;
+                }
+                if (progress) {
+                    progress.textContent = failed
+                        ? sent + ' delivered, ' + failed + ' failed. Retry the failed ones later.'
+                        : sent + ' notifications delivered.';
+                }
+                toast(failed ? 'Broadcast finished with ' + failed + ' failed.' : 'Broadcast sent to ' + sent + ' accounts.',
+                    failed ? 'error' : 'ok');
+            }
+        });
+    }
+
+    function promptNotifyUser(uid) {
+        var user = displayUser(uid);
+        openModal({
+            title: 'Send notification',
+            bodyHtml: '<p>Notify <strong>' + esc(user.name) + '</strong> (' + esc(user.email || uid) + ').</p>' +
+                '<label for="modal-notify-title">Title</label><input id="modal-notify-title" maxlength="120" placeholder="Notification title">' +
+                '<label for="modal-reason">Message</label><textarea id="modal-reason" maxlength="1000" placeholder="Message body"></textarea>',
+            confirmLabel: 'Send',
+            onConfirm: async function () {
+                var title = String(($('#modal-notify-title') || {}).value || '').trim();
+                var message = String(($('#modal-reason') || {}).value || '').trim();
+                if (!title || !message) throw new Error('Enter both a title and a message.');
+                await createNotification(uid, title, message, 'system', '');
+                toast('Notification sent to ' + user.name + '.');
+            }
+        });
+    }
+
+    /* -------------------- Global search -------------------- */
+
+    function globalMatches(query) {
+        var q = String(query || '').trim().toLowerCase();
+        if (!q) return [];
+        var results = [];
+        propertyList().filter(function (property) {
+            return matchesQuery(property, q);
+        }).slice(0, 5).forEach(function (property) {
+            results.push({
+                type: 'listing', kind: 'Listing', key: property._key, uid: property.ownerId,
+                title: property.title || 'Untitled listing',
+                sub: [priceLabel(property), property.location || 'No location', property.status].filter(Boolean).join(' · ')
+            });
+        });
+        userList().filter(function (user) {
+            return [user.name, user.email, user.uid, user.phone].join(' ').toLowerCase().indexOf(q) !== -1;
+        }).slice(0, 4).forEach(function (user) {
+            results.push({
+                type: 'user', kind: 'User', uid: user.uid,
+                title: user.name, sub: user.email || user.uid
+            });
+        });
+        Object.keys(state.kyc).filter(function (key) {
+            var submission = state.kyc[key] || {};
+            return [submission.userName, submission.userEmail, submission.documentType, submission.status, key]
+                .join(' ').toLowerCase().indexOf(q) !== -1;
+        }).slice(0, 3).forEach(function (key) {
+            var submission = state.kyc[key];
+            results.push({
+                type: 'kyc', kind: 'KYC', key: key, uid: submission.userId,
+                title: submission.userName || submission.userEmail || 'KYC submission',
+                sub: (submission.status || 'Pending') + ' · ' + (submission.documentType || 'Document')
+            });
+        });
+        supportThreads().filter(function (thread) {
+            return [thread.user.name, thread.user.email, thread.uid, thread.last.message]
+                .join(' ').toLowerCase().indexOf(q) !== -1;
+        }).slice(0, 3).forEach(function (thread) {
+            results.push({
+                type: 'support', kind: 'Support', uid: thread.uid,
+                title: thread.user.name, sub: thread.last.message || 'No messages'
+            });
+        });
+        return results;
+    }
+
+    function globalResultsHtml(results) {
+        if (!results.length) {
+            var input = $('#global-search');
+            return '<div class="gs-empty">No matches for “' + esc(input ? input.value : '') + '”.</div>';
+        }
+        return results.map(function (result, index) {
+            return '<button type="button" class="gs-item' + (index === state.globalFocus ? ' is-focused' : '') + '" data-action="gs-pick" data-index="' + index + '">' +
+                '<span class="gs-kind">' + esc(result.kind) + '</span>' +
+                '<span class="grow"><strong>' + esc(result.title) + '</strong><span>' + esc(result.sub) + '</span></span></button>';
+        }).join('');
+    }
+
+    function renderGlobalResults() {
+        var panel = $('#global-search-results');
+        if (!panel) return;
+        var input = $('#global-search');
+        var value = input ? String(input.value || '').trim() : '';
+        if (!value) {
+            panel.hidden = true;
+            panel.innerHTML = '';
+            return;
+        }
+        panel.innerHTML = globalResultsHtml(state.globalResults);
+        panel.hidden = false;
+    }
+
+    function closeGlobalResults() {
+        var panel = $('#global-search-results');
+        if (panel) panel.hidden = true;
+        state.globalFocus = -1;
+    }
+
+    async function chooseGlobalResult(result) {
+        if (!result) return;
+        closeGlobalResults();
+        var input = $('#global-search');
+        if (input) input.value = '';
+        state.globalResults = [];
+        state.globalFocus = -1;
+        if (result.type === 'user') {
+            openUserProfile(result.uid);
+            return;
+        }
+        if (result.type === 'support') {
+            state.ui.supportQuery = '';
+            await setView('support');
+            await openThread(result.uid);
+            return;
+        }
+        if (result.type === 'kyc') {
+            var submission = state.kyc[result.key] || {};
+            state.ui.kycStatus = submission.status === 'Approved' || submission.status === 'Rejected' ? submission.status : 'Pending';
+            state.ui.kycQuery = submission.userName || submission.userEmail || '';
+            await setView('kyc');
+            return;
+        }
+        var property = state.properties[result.key];
+        state.ui.listingStatus = property && property.status ? property.status : 'PENDING';
+        state.ui.listingQuery = result.title;
+        await setView('listings');
+        toggleDetails(result.key);
+    }
+
+    function showShortcuts() {
+        openModal({
+            title: 'Keyboard shortcuts',
+            bodyHtml: '<dl class="detail-grid">' +
+                '<div><dt>/</dt><dd>Focus global search</dd></div>' +
+                '<div><dt>Esc</dt><dd>Close search or dialog</dd></div>' +
+                '<div><dt>↑ ↓</dt><dd>Move through search results</dd></div>' +
+                '<div><dt>Enter</dt><dd>Open the highlighted result</dd></div>' +
+                '<div><dt>R</dt><dd>Refresh admin data</dd></div>' +
+                '</dl>',
+            confirmLabel: 'Close',
+            hideCancel: true,
+            onConfirm: function () { }
+        });
     }
 
     function rejectedListHtml() {
@@ -1038,6 +1999,7 @@
             case 'users': html += usersView(); break;
             case 'kyc': html += kycView(); break;
             case 'support': html += supportView(); break;
+            case 'broadcast': html += broadcastView(); break;
             case 'search': html += searchView(); break;
             case 'delete': html += deleteView(); break;
             default: html += overviewView(); break;
@@ -1046,13 +2008,41 @@
         if (state.view === 'listings') renderListingResults();
         if (state.view === 'kyc') hydrateProtectedKycImages().catch(function (error) { toast(error.message, 'error'); });
         if (state.view === 'support' && state.supportUid) scrollChatToBottom();
+        updateSyncStatus();
     }
 
     function updateTabs() {
-        var tabs = document.querySelectorAll('.tab[data-view]');
+        var tabs = document.querySelectorAll('.tab[data-view], .nav-item[data-view]');
         for (var i = 0; i < tabs.length; i += 1) {
-            tabs[i].classList.toggle('is-active', tabs[i].getAttribute('data-view') === state.view);
+            var active = tabs[i].getAttribute('data-view') === state.view;
+            tabs[i].classList.toggle('is-active', active);
+            if (active) tabs[i].setAttribute('aria-current', 'page');
+            else tabs[i].removeAttribute('aria-current');
         }
+        updateNavCounts();
+    }
+
+    function updateNavCounts() {
+        if (!state.loaded) return;
+        var properties = propertyList();
+        var pending = properties.filter(function (property) { return property.status === 'PENDING'; }).length;
+        var counts = {
+            overview: pending,
+            listings: pending,
+            kyc: Object.keys(state.kyc).filter(function (key) { return state.kyc[key] && state.kyc[key].status === 'Pending'; }).length,
+            reports: pendingPropertyReports().length + groupedUserReports().length,
+            users: Object.keys(state.users).length,
+            support: unreadConversations().length,
+            broadcast: '',
+            search: '',
+            delete: properties.filter(function (property) { return property.status === 'REJECTED'; }).length
+        };
+        Object.keys(counts).forEach(function (view) {
+            var nodes = document.querySelectorAll('.nav-count[data-count="' + view + '"]');
+            for (var i = 0; i < nodes.length; i += 1) {
+                nodes[i].textContent = counts[view] === '' ? '' : String(counts[view]);
+            }
+        });
     }
 
     /* -------------------- Modal and toast -------------------- */
@@ -1121,12 +2111,24 @@
 
     /* -------------------- Actions -------------------- */
 
+    var VIEWS = ['overview', 'listings', 'reports', 'users', 'kyc', 'support', 'broadcast', 'search', 'delete'];
+
     async function setView(view) {
-        if (!view) return;
+        if (!view || VIEWS.indexOf(view) === -1) return;
         state.view = view;
         state.supportUid = view === 'support' ? state.supportUid : null;
+        if (view !== 'listings') state.ui.selected = {};
         stopPoll();
+        closeGlobalResults();
         state.loadError = '';
+        closeSidebar();
+        try {
+            if (window.location && String(window.location.hash || '') !== '#/' + view) {
+                window.location.hash = '#/' + view;
+            }
+        } catch (error) {
+            // Hash routing is optional.
+        }
         if (view === 'support') {
             try {
                 await loadSupport();
@@ -1135,7 +2137,29 @@
             }
         }
         render();
+        var viewRoot = $('#view-root');
+        if (viewRoot) viewRoot.scrollTop = 0;
         if (view === 'support') startSupportPoll();
+    }
+
+    function initialView() {
+        var hash = String((window.location && window.location.hash) || '').replace(/^#\/?/, '').split('/')[0];
+        return VIEWS.indexOf(hash) !== -1 ? hash : 'overview';
+    }
+
+    function closeSidebar() {
+        var sidebar = $('#sidebar');
+        var scrim = $('.sidebar-scrim');
+        if (sidebar) sidebar.classList.remove('is-open');
+        if (scrim) scrim.hidden = true;
+    }
+
+    function toggleSidebar() {
+        var sidebar = $('#sidebar');
+        var scrim = $('.sidebar-scrim');
+        if (!sidebar) return;
+        var open = sidebar.classList.toggle('is-open');
+        if (scrim) scrim.hidden = !open;
     }
 
     function toggleDetails(key) {
@@ -1156,6 +2180,203 @@
         state.properties[key] = Object.assign({}, state.properties[key], patch);
     }
 
+    /* -------------------- Public share projections -------------------- */
+
+    // SharedProperties/<key> is the only listing data strangers may read. It is
+    // written here, from approved listings, and rendered by share-worker (or the
+    // static gharbato-share.html fallback). Keep the field list in sync with
+    // share-worker/README.md and the validation rules in database.rules.json.
+
+    var SHARE_IMAGE_HOSTS = ['res.cloudinary.com', 'lh3.googleusercontent.com'];
+    var SHARE_IMAGE_LIMIT = 12;
+
+    function shareText(value, limit) {
+        var text = typeof value === 'string' ? value.trim() : '';
+        return text.length > limit ? text.slice(0, limit) : text;
+    }
+
+    function shareNumber(value, min, max) {
+        var parsed = Number(value);
+        if (!Number.isFinite(parsed)) return 0;
+        return Math.min(max, Math.max(min, Math.round(parsed)));
+    }
+
+    function shareCoordinate(value, limit) {
+        var parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed === 0) return null;
+        if (Math.abs(parsed) > limit) return null;
+        return Math.round(parsed * 1000) / 1000;
+    }
+
+    function shareImageUrl(value) {
+        var raw = typeof value === 'string' ? value.trim() : '';
+        if (!raw || raw.indexOf('https://') !== 0) return '';
+        return SHARE_IMAGE_HOSTS.some(function (host) {
+            return raw.indexOf('https://' + host + '/') === 0;
+        }) && raw.length <= 2048 ? raw : '';
+    }
+
+    function shareImages(raw) {
+        var total = 0;
+        var out = {};
+        if (!raw || typeof raw !== 'object') return out;
+        Object.keys(raw).forEach(function (category) {
+            if (!/^(cover|exterior|living|bedrooms|bathrooms|kitchen|other)$/.test(category)) return;
+            var list = Array.isArray(raw[category]) ? raw[category] : [raw[category]];
+            var urls = [];
+            list.forEach(function (value) {
+                if (total >= SHARE_IMAGE_LIMIT) return;
+                var url = shareImageUrl(value);
+                if (url && urls.indexOf(url) === -1) {
+                    urls.push(url);
+                    total += 1;
+                }
+            });
+            if (urls.length) out[category] = urls;
+        });
+        return out;
+    }
+
+    function shareAmenities(raw) {
+        if (!Array.isArray(raw)) return [];
+        var out = [];
+        raw.forEach(function (value) {
+            var text = shareText(typeof value === 'string' ? value : '', 80);
+            if (text && out.indexOf(text) === -1 && out.length < 20) out.push(text);
+        });
+        return out;
+    }
+
+    function shareProjection(property) {
+        if (!property) return null;
+        if (String(property.status || '').toUpperCase() !== 'APPROVED') return null;
+        var title = shareText(property.title, 200);
+        if (!title) return null;
+        var projection = {
+            title: title,
+            description: shareText(property.description, 5000),
+            price: shareText(property.price, 100),
+            marketType: shareText(property.marketType, 60),
+            location: shareText(property.location, 300),
+            propertyType: shareText(property.propertyType, 60),
+            bedrooms: shareNumber(property.bedrooms, 0, 100),
+            bathrooms: shareNumber(property.bathrooms, 0, 100),
+            sqft: shareText(property.sqft, 60),
+            floor: shareText(property.floor, 60),
+            furnishing: shareText(property.furnishing, 60),
+            parking: property.parking === true,
+            petsAllowed: property.petsAllowed === true,
+            images: shareImages(property.images),
+            amenities: shareAmenities(property.amenities),
+            availableFrom: shareText(property.availableFrom, 80),
+            minimumLease: shareText(property.minimumLease, 80),
+            advancePayment: shareText(property.advancePayment, 80),
+            securityDeposit: shareText(property.securityDeposit, 80),
+            utilitiesIncluded: shareText(property.utilitiesIncluded, 200),
+            commission: shareText(property.commission, 80),
+            totalRooms: shareText(property.totalRooms, 40),
+            kitchen: shareText(property.kitchen, 60),
+            ownerName: shareText(property.ownerName, 200),
+            ownerImageUrl: shareImageUrl(property.ownerImageUrl),
+            latitude: shareCoordinate(property.latitude, 90),
+            longitude: shareCoordinate(property.longitude, 180),
+            updatedAt: Number(property.updatedAt) || Date.now()
+        };
+        if (projection.latitude === null || projection.longitude === null) {
+            delete projection.latitude;
+            delete projection.longitude;
+        }
+        return projection;
+    }
+
+    // Ignore updatedAt when deciding whether the published copy is stale, so a
+    // view counter bump never triggers a rewrite.
+    function shareSignature(entry) {
+        if (!entry) return '';
+        var copy = Object.assign({}, entry);
+        delete copy.updatedAt;
+        return JSON.stringify(copy);
+    }
+
+    async function publishShareEntry(key) {
+        if (!state.session || !state.properties[key]) return;
+        var projection = shareProjection(state.properties[key]);
+        if (!projection) {
+            await unpublishShareEntry(key);
+            return;
+        }
+        if (shareSignature(state.shared[key]) === shareSignature(projection)) return;
+        await dbPut('SharedProperties/' + enc(key), projection);
+        state.shared[key] = projection;
+    }
+
+    async function unpublishShareEntry(key) {
+        if (!state.session) return;
+        if (!state.shared[key]) return;
+        await dbDelete('SharedProperties/' + enc(key));
+        delete state.shared[key];
+    }
+
+    function bestEffort(promise) {
+        return Promise.resolve(promise).catch(function (error) {
+            if (window.console && console.warn) console.warn('Share link update failed', error && error.message);
+        });
+    }
+
+    async function syncSharedProperties(options) {
+        options = options || {};
+        var summary = { written: 0, removed: 0, failed: 0 };
+        if (!state.session) return summary;
+        var queued = {};
+        var batch = [];
+        Object.keys(state.properties).forEach(function (key) {
+            var projection = shareProjection(state.properties[key]);
+            if (!projection) {
+                if (state.shared[key]) {
+                    queued[key] = true;
+                    batch.push({ key: key, remove: true });
+                }
+                return;
+            }
+            if (shareSignature(state.shared[key]) !== shareSignature(projection)) {
+                queued[key] = true;
+                batch.push({ key: key, projection: projection });
+            }
+        });
+        Object.keys(state.shared).forEach(function (key) {
+            if (!state.properties[key] && !queued[key]) {
+                queued[key] = true;
+                batch.push({ key: key, remove: true });
+            }
+        });
+        for (var i = 0; i < batch.length; i += 5) {
+            var chunk = batch.slice(i, i + 5);
+            var results = await Promise.allSettled(chunk.map(function (item) {
+                return item.remove
+                    ? dbDelete('SharedProperties/' + enc(item.key))
+                    : dbPut('SharedProperties/' + enc(item.key), item.projection);
+            }));
+            results.forEach(function (result, index) {
+                var item = chunk[index];
+                if (result.status === 'fulfilled') {
+                    if (item.remove) {
+                        delete state.shared[item.key];
+                        summary.removed += 1;
+                    } else {
+                        state.shared[item.key] = item.projection;
+                        summary.written += 1;
+                    }
+                } else {
+                    summary.failed += 1;
+                }
+            });
+        }
+        if (options.force && window.console && console.info) {
+            console.info('Share links synced', summary);
+        }
+        return summary;
+    }
+
     function confirmApproveListing(key) {
         var property = state.properties[key];
         if (!property) return;
@@ -1167,6 +2388,7 @@
             onConfirm: async function () {
                 await dbPatch('Property/' + enc(key), { status: 'APPROVED' });
                 updateProperty(key, { status: 'APPROVED' });
+                await bestEffort(publishShareEntry(key));
                 var owner = ownerOf(property);
                 var notificationFailed = false;
                 try {
@@ -1200,6 +2422,7 @@
                 if (!reason) throw new Error('Enter a rejection reason.');
                 await dbPatch('Property/' + enc(key), { status: 'REJECTED' });
                 updateProperty(key, { status: 'REJECTED' });
+                await bestEffort(unpublishShareEntry(key));
                 try {
                     await createNotification(property.ownerId, '❌ Property Rejected',
                         "Your property '" + (property.title || '') + "' was rejected. Reason: " + reason,
@@ -1209,6 +2432,108 @@
                 }
                 render();
                 toast('Listing rejected.');
+            }
+        });
+    }
+
+    function selectedPendingProperties() {
+        return selectedKeys().map(function (key) { return state.properties[key]; })
+            .filter(function (property) { return property && property.status === 'PENDING'; });
+    }
+
+    async function patchListings(keys, patch) {
+        var succeeded = [];
+        var failed = 0;
+        for (var i = 0; i < keys.length; i += 5) {
+            var chunk = keys.slice(i, i + 5);
+            var results = await Promise.allSettled(chunk.map(function (key) {
+                return dbPatch('Property/' + enc(key), patch);
+            }));
+            results.forEach(function (result, index) {
+                if (result.status === 'fulfilled') succeeded.push(chunk[index]);
+                else failed += 1;
+            });
+        }
+        return { succeeded: succeeded, failed: failed };
+    }
+
+    function bulkApprove() {
+        var properties = selectedPendingProperties();
+        if (!properties.length) return toast('Select at least one pending listing.', 'error');
+        openModal({
+            title: 'Approve ' + properties.length + ' listing' + (properties.length === 1 ? '' : 's'),
+            bodyHtml: '<p>Approve ' + properties.length + ' listing' + (properties.length === 1 ? '' : 's') +
+                '? They become visible immediately and their owners are notified.</p>' +
+                '<p class="muted small">Every other user gets one “new listings” notification instead of one per property.</p>',
+            confirmLabel: 'Approve all',
+            onConfirm: async function () {
+                var keys = properties.map(function (property) { return property._key; });
+                var outcome = await patchListings(keys, { status: 'APPROVED' });
+                outcome.succeeded.forEach(function (key) {
+                    updateProperty(key, { status: 'APPROVED' });
+                });
+                var notificationsFailed = 0;
+                for (var i = 0; i < outcome.succeeded.length; i += 5) {
+                    var chunk = outcome.succeeded.slice(i, i + 5);
+                    var results = await Promise.allSettled(chunk.map(function (key) {
+                        var property = state.properties[key] || {};
+                        return createNotification(property.ownerId, '🎉 Property Approved!',
+                            "Your property '" + (property.title || '') + "' has been approved and is now live!",
+                            'listing_approved', property.id);
+                    }));
+                    notificationsFailed += results.filter(function (result) { return result.status === 'rejected'; }).length;
+                }
+                if (outcome.succeeded.length) {
+                    try {
+                        await notifyAllUsers('🏠 New Listings Available',
+                            outcome.succeeded.length + ' new propert' + (outcome.succeeded.length === 1 ? 'y is' : 'ies are') + ' now live on GharBato.',
+                            'property', '');
+                    } catch (error) {
+                        notificationsFailed += 1;
+                    }
+                }
+                await bestEffort(syncSharedProperties());
+                state.ui.selected = {};
+                render();
+                var summary = outcome.succeeded.length + ' approved' + (outcome.failed ? ', ' + outcome.failed + ' failed' : '');
+                toast(notificationsFailed ? summary + '. Some notifications failed.' : summary + '.',
+                    outcome.failed || notificationsFailed ? 'error' : 'ok');
+            }
+        });
+    }
+
+    function bulkReject() {
+        var properties = selectedPendingProperties();
+        if (!properties.length) return toast('Select at least one pending listing.', 'error');
+        openModal({
+            title: 'Reject ' + properties.length + ' listing' + (properties.length === 1 ? '' : 's'),
+            bodyHtml: '<p>Reject ' + properties.length + ' listing' + (properties.length === 1 ? '' : 's') +
+                '? Each owner receives this reason.</p>' +
+                '<label for="modal-reason">Reason</label><textarea id="modal-reason" placeholder="Explain what needs to change"></textarea>',
+            confirmLabel: 'Reject all',
+            confirmClass: 'btn-danger',
+            onConfirm: async function () {
+                var reason = String(($('#modal-reason') || {}).value || '').trim();
+                if (!reason) throw new Error('Enter a rejection reason.');
+                var keys = properties.map(function (property) { return property._key; });
+                var outcome = await patchListings(keys, { status: 'REJECTED' });
+                outcome.succeeded.forEach(function (key) {
+                    updateProperty(key, { status: 'REJECTED' });
+                });
+                for (var i = 0; i < outcome.succeeded.length; i += 5) {
+                    var chunk = outcome.succeeded.slice(i, i + 5);
+                    await Promise.allSettled(chunk.map(function (key) {
+                        var property = state.properties[key] || {};
+                        return createNotification(property.ownerId, '❌ Property Rejected',
+                            "Your property '" + (property.title || '') + "' was rejected. Reason: " + reason,
+                            'system', property.id);
+                    }));
+                }
+                await bestEffort(syncSharedProperties());
+                state.ui.selected = {};
+                render();
+                toast(outcome.succeeded.length + ' rejected' + (outcome.failed ? ', ' + outcome.failed + ' failed' : '') + '.',
+                    outcome.failed ? 'error' : 'ok');
             }
         });
     }
@@ -1256,6 +2581,7 @@
                 if (propertyKey) {
                     await dbPatch('Property/' + enc(propertyKey), { status: 'REJECTED' });
                     updateProperty(propertyKey, { status: 'REJECTED' });
+                    await bestEffort(unpublishShareEntry(propertyKey));
                     try {
                         await createNotification(latest.ownerId || state.properties[propertyKey].ownerId,
                             '⚠️ Property Removed',
@@ -1408,7 +2734,14 @@
     }
 
     async function openThread(uid) {
+        closeModal();
+        state.view = 'support';
         state.supportUid = uid;
+        try {
+            window.location.hash = '#/' + state.view;
+        } catch (error) {
+            // Hash routing is optional.
+        }
         render();
         try {
             await fetchThread(uid, true);
@@ -1533,6 +2866,7 @@
                 await dbPost('DeletionHistory', record);
                 await dbDelete('Property/' + enc(key));
                 delete state.properties[key];
+                await bestEffort(unpublishShareEntry(key));
                 render();
                 toast('Listing deleted.');
             }
@@ -1546,7 +2880,12 @@
         try {
             await Promise.all([loadCore(), loadSupport()]);
             if (!state.session || generation !== state.sessionGeneration) return;
+            await bestEffort(syncSharedProperties());
+            if (!state.session || generation !== state.sessionGeneration) return;
             state.loaded = true;
+            state.loadedAt = Date.now();
+            state.loadError = '';
+            startRefreshTimer();
             render();
             if (showToast) toast('Data refreshed.');
         } catch (error) {
@@ -1594,6 +2933,29 @@
         }, interval);
     }
 
+    function stopRefreshTimer() {
+        if (state.refreshTimer) {
+            clearInterval(state.refreshTimer);
+            state.refreshTimer = null;
+        }
+    }
+
+    function startRefreshTimer() {
+        stopRefreshTimer();
+        if (!state.session) return;
+        state.refreshTimer = setInterval(function () {
+            if (!state.session) {
+                stopRefreshTimer();
+                return;
+            }
+            updateSyncStatus();
+            if (document.visibilityState && document.visibilityState === 'hidden') return;
+            if (state.busy || !state.loadedAt || Date.now() - state.loadedAt < 60000) return;
+            state.busy = true;
+            refreshAll(false).catch(function () { }).then(function () { state.busy = false; });
+        }, 30000);
+    }
+
     /* -------------------- Auth UI -------------------- */
 
     function setLoginError(message) {
@@ -1630,6 +2992,8 @@
     function signOut(message) {
         state.sessionGeneration += 1;
         stopPoll();
+        stopRefreshTimer();
+        state.busy = false;
         closeModal();
         clearKycObjectUrls();
         clearSession();
@@ -1645,8 +3009,18 @@
         state.kyc = {};
         state.deletionHistory = {};
         state.presence = {};
+        state.loadedAt = 0;
+        state.ui.selected = {};
+        state.globalResults = [];
+        state.globalFocus = -1;
         state.supportUid = null;
         state.view = 'overview';
+        try {
+            window.location.hash = '#/overview';
+        } catch (error) {
+            // Hash routing is optional.
+        }
+        closeSidebar();
         var root = $('#view-root');
         if (root) root.innerHTML = '';
         showLogin(message);
@@ -1667,8 +3041,9 @@
         try {
             await signIn(email, password);
             $('#login-password').value = '';
-            state.view = 'overview';
+            state.view = initialView();
             state.loaded = false;
+            state.supportUid = null;
             showApp();
             render();
             await refreshAll(false);
@@ -1685,6 +3060,15 @@
     async function init() {
         var form = $('#login-form');
         if (form) form.addEventListener('submit', handleLogin);
+        applyTheme(readPrefs().theme || 'system', false);
+
+        if (typeof window.addEventListener === 'function') {
+            window.addEventListener('hashchange', function () {
+                if (!state.session || !state.loaded) return;
+                var next = initialView();
+                if (next !== state.view) setView(next).catch(function () { });
+            });
+        }
 
         if (!API_KEY || !DB_URL) {
             showLogin('Firebase configuration is missing.');
@@ -1700,6 +3084,7 @@
         }
 
         state.session = saved;
+        state.view = initialView();
         showApp();
         render();
         try {
@@ -1727,6 +3112,76 @@
             case 'sign-out':
                 signOut('');
                 return;
+            case 'toggle-sidebar':
+                toggleSidebar();
+                return;
+            case 'toggle-theme':
+                toggleTheme();
+                return;
+            case 'report-status':
+                state.ui.reportStatus = element.getAttribute('data-status') || 'PENDING';
+                render();
+                return;
+            case 'view-report-listing':
+                openReportListing(element.getAttribute('data-key'));
+                return;
+            case 'view-report-user':
+                openUserProfile(element.getAttribute('data-uid'));
+                return;
+            case 'show-shortcuts':
+                showShortcuts();
+                return;
+            case 'select-listing':
+                if (element.checked) state.ui.selected[element.getAttribute('data-key')] = true;
+                else delete state.ui.selected[element.getAttribute('data-key')];
+                renderListingResults();
+                return;
+            case 'select-all-listings':
+                state.ui.selected = {};
+                if (element.checked) {
+                    visibleListings().forEach(function (property) { state.ui.selected[property._key] = true; });
+                }
+                renderListingResults();
+                return;
+            case 'bulk-clear':
+                state.ui.selected = {};
+                renderListingResults();
+                return;
+            case 'bulk-approve':
+                bulkApprove();
+                return;
+            case 'bulk-reject':
+                bulkReject();
+                return;
+            case 'report-tab':
+                state.ui.reportTab = element.getAttribute('data-tab') === 'user' ? 'user' : 'listing';
+                state.ui.reportQuery = '';
+                render();
+                return;
+            case 'user-filter':
+                state.ui.userFilter = element.getAttribute('data-filter') || 'all';
+                writePrefs({ userFilter: state.ui.userFilter });
+                render();
+                return;
+            case 'open-user':
+                openUserProfile(element.getAttribute('data-uid'));
+                return;
+            case 'notify-user':
+                promptNotifyUser(element.getAttribute('data-uid'));
+                return;
+            case 'send-broadcast':
+                await sendBroadcast();
+                return;
+            case 'quick-reply':
+                var replyInput = $('#chat-input');
+                if (replyInput) {
+                    replyInput.value = element.getAttribute('data-message') || '';
+                    replyInput.focus();
+                }
+                return;
+            case 'gs-pick':
+                await chooseGlobalResult(state.globalResults[Number(element.getAttribute('data-index'))]);
+                return;
             case 'listing-status':
                 state.ui.listingStatus = element.getAttribute('data-status');
                 render();
@@ -1747,6 +3202,14 @@
                 return;
             case 'reject-listing':
                 promptRejectListing(element.getAttribute('data-key'));
+                return;
+            case 'sync-share-links':
+                var shareSummary = await syncSharedProperties({ force: true });
+                render();
+                toast(shareSummary.failed
+                    ? 'Share links: ' + shareSummary.written + ' updated, ' + shareSummary.removed + ' removed, ' + shareSummary.failed + ' failed.'
+                    : 'Share links up to date: ' + shareSummary.written + ' updated, ' + shareSummary.removed + ' removed.',
+                    shareSummary.failed ? 'error' : 'ok');
                 return;
             case 'keep-report':
                 confirmKeepReport(element.getAttribute('data-property'));
@@ -1803,6 +3266,8 @@
     }
 
     document.addEventListener('click', function (event) {
+        var wrap = $('#global-search-wrap');
+        if (wrap && event.target && !wrap.contains(event.target)) closeGlobalResults();
         var element = event.target.closest('[data-action]');
         if (!element) return;
         var action = element.getAttribute('data-action');
@@ -1821,6 +3286,19 @@
         });
     });
 
+    function rerenderKeepingFocus(id) {
+        var current = $('#' + id);
+        var caret = current && typeof current.selectionStart === 'number' ? current.selectionStart : null;
+        render();
+        var next = $('#' + id);
+        if (next) {
+            next.focus();
+            if (caret != null && next.setSelectionRange) {
+                try { next.setSelectionRange(caret, caret); } catch (error) { /* ignore */ }
+            }
+        }
+    }
+
     document.addEventListener('input', function (event) {
         var target = event.target;
         if (!target || !target.id) return;
@@ -1834,13 +3312,94 @@
         } else if (target.id === 'delete-search') {
             state.ui.deleteQuery = target.value;
             renderDeleteResults();
+        } else if (target.id === 'global-search') {
+            state.globalResults = globalMatches(target.value);
+            state.globalFocus = -1;
+            renderGlobalResults();
+        } else if (target.id === 'user-search') {
+            state.ui.userQuery = target.value;
+            rerenderKeepingFocus('user-search');
+        } else if (target.id === 'kyc-search') {
+            state.ui.kycQuery = target.value;
+            renderKycResults();
+        } else if (target.id === 'report-search') {
+            state.ui.reportQuery = target.value;
+            renderReportResults();
+        } else if (target.id === 'support-search') {
+            state.ui.supportQuery = target.value;
+            var list = $('#support-list');
+            if (list) list.innerHTML = supportListHtml();
+        } else if (target.id === 'bc-title' || target.id === 'bc-message') {
+            updateBroadcastCounters();
+        }
+    });
+
+    document.addEventListener('change', function (event) {
+        var target = event.target;
+        if (!target || !target.id) return;
+        if (target.id === 'listing-sort') {
+            state.ui.listingSort = target.value;
+            writePrefs({ listingSort: target.value });
+            renderListingResults();
+        } else if (target.id === 'listing-market') {
+            state.ui.listingMarket = target.value;
+            renderListingResults();
+        } else if (target.id === 'kyc-sort') {
+            state.ui.kycSort = target.value;
+            writePrefs({ kycSort: target.value });
+            renderKycResults();
+        } else if (target.id === 'report-sort') {
+            state.ui.reportSort = target.value;
+            renderReportResults();
+        } else if (target.id === 'bc-audience' || target.id === 'bc-user') {
+            updateBroadcastCounters();
         }
     });
 
     document.addEventListener('keydown', function (event) {
         var modalRoot = $('#modal-root');
+        var target = event.target;
+        var tag = target && target.tagName ? String(target.tagName).toUpperCase() : '';
+        var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable);
+
+        if (event.key === '/' && !typing) {
+            var search = $('#global-search');
+            if (search) {
+                event.preventDefault();
+                search.focus();
+            }
+            return;
+        }
+        if (target && target.id === 'global-search') {
+            if (event.key === 'Escape') {
+                closeGlobalResults();
+                target.blur();
+                return;
+            }
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                if (!state.globalResults.length) return;
+                event.preventDefault();
+                state.globalFocus = event.key === 'ArrowDown'
+                    ? (state.globalFocus + 1) % state.globalResults.length
+                    : (state.globalFocus <= 0 ? state.globalResults.length - 1 : state.globalFocus - 1);
+                renderGlobalResults();
+                return;
+            }
+            if (event.key === 'Enter' && state.globalFocus >= 0) {
+                event.preventDefault();
+                chooseGlobalResult(state.globalResults[state.globalFocus]).catch(function (error) {
+                    toast(error && error.message ? error.message : 'Could not open that result.', 'error');
+                });
+                return;
+            }
+        }
         if (event.key === 'Escape' && modalRoot && modalRoot.children.length) {
             closeModal();
+            return;
+        }
+        if (event.key === 'r' && !typing && !event.metaKey && !event.ctrlKey && !event.altKey && !(modalRoot && modalRoot.children.length)) {
+            state.ui.selected = {};
+            refreshAll(true);
             return;
         }
         if (event.target && event.target.id === 'chat-input' && event.key === 'Enter' && !event.shiftKey) {

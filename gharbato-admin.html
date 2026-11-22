@@ -6,14 +6,34 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="description" content="Private GharBato administration console.">
     <title>GharBato Admin</title>
-    <link rel="stylesheet" href="gharbato-admin.css?v=20261026-7">
+    <link rel="icon" type="image/png" href="Images/gharbato-logo.png">
+    <script>
+        /* Apply the stored theme before first paint so there is no flash. */
+        (function () {
+            try {
+                var prefs = JSON.parse(localStorage.getItem('gharbato-admin-prefs-v1') || '{}');
+                var theme = prefs.theme || 'system';
+                var dark = theme === 'dark' || (theme !== 'light' &&
+                    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        }());
+    </script>
+    <link rel="stylesheet" href="gharbato-admin.css?v=20261122-5">
 </head>
 <body>
     <div id="login-view" class="auth-screen">
         <div class="auth-card">
-            <a class="auth-back" href="index.html">&larr; Back to portfolio</a>
+            <div class="auth-top">
+                <a class="auth-back" href="index.html">&larr; Back to portfolio</a>
+                <button type="button" class="icon-btn auth-theme" data-action="toggle-theme" aria-label="Switch to dark theme" title="Switch to dark theme">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13.4A8.6 8.6 0 1 1 10.6 3.5a6.8 6.8 0 0 0 9.9 9.9Z"/></svg>
+                </button>
+            </div>
             <div class="auth-brand">
-                <span class="brand-mark">GB</span>
+                <img class="brand-logo" src="Images/gharbato-logo.png" alt="GharBato" width="44" height="44">
                 <div>
                     <strong>GharBato</strong>
                     <span>Admin console</span>
@@ -34,45 +54,112 @@
     </div>
 
     <div id="admin-view" hidden>
-        <header class="topbar">
-            <div class="topbar-inner">
-                <div class="topbar-brand">
-                    <span class="brand-mark">GB</span>
+        <div class="shell">
+            <aside class="sidebar" id="sidebar" aria-label="Admin navigation">
+                <div class="topbar-brand sidebar-brand">
+                    <img class="brand-logo" src="Images/gharbato-logo.png" alt="GharBato" width="34" height="34">
                     <div>
                         <strong>GharBato</strong>
                         <span>Admin</span>
                     </div>
                 </div>
-                <div class="topbar-actions">
-                    <span id="account-email" class="account-email"></span>
-                    <button type="button" class="btn btn-ghost" data-action="refresh">Refresh</button>
-                    <button type="button" class="btn btn-ghost" data-action="sign-out">Sign out</button>
+                <nav class="side-nav">
+                    <p class="nav-group">Review</p>
+                    <button type="button" class="nav-item" data-action="nav" data-view="overview">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+                        <span class="nav-label">Overview</span>
+                        <span class="nav-count" data-count="overview"></span>
+                    </button>
+                    <button type="button" class="nav-item" data-action="nav" data-view="listings">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg></span>
+                        <span class="nav-label">Listings</span>
+                        <span class="nav-count" data-count="listings"></span>
+                    </button>
+                    <button type="button" class="nav-item" data-action="nav" data-view="kyc">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.6 1.7-2.4 3-2.4s2.4.8 3 2.4"/><path d="M14.5 10h4M14.5 14h4"/></svg></span>
+                        <span class="nav-label">KYC</span>
+                        <span class="nav-count" data-count="kyc"></span>
+                    </button>
+
+                    <p class="nav-group">Community</p>
+                    <button type="button" class="nav-item" data-action="nav" data-view="reports">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h11l-1.6 4L16 12H5"/></svg></span>
+                        <span class="nav-label">Reports</span>
+                        <span class="nav-count" data-count="reports"></span>
+                    </button>
+                    <button type="button" class="nav-item" data-action="nav" data-view="users">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.7-3.4 3.1-5.2 6-5.2s5.3 1.8 6 5.2"/><path d="M16 8.4a3 3 0 0 1 0 5.8"/><path d="M18 15.4c1.7.7 2.7 2.2 3 4.6"/></svg></span>
+                        <span class="nav-label">Users</span>
+                        <span class="nav-count" data-count="users"></span>
+                    </button>
+                    <button type="button" class="nav-item" data-action="nav" data-view="support">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H8l-4 3v-5.2A8 8 0 0 1 13 4a8 8 0 0 1 8 8Z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg></span>
+                        <span class="nav-label">Support</span>
+                        <span class="nav-count" data-count="support"></span>
+                    </button>
+
+                    <p class="nav-group">Tools</p>
+                    <button type="button" class="nav-item" data-action="nav" data-view="broadcast">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10v4a1 1 0 0 0 1 1h2l7 4V5L7 9H5a1 1 0 0 0-1 1Z"/><path d="M17 9.5a3.5 3.5 0 0 1 0 5"/><path d="M19.5 7a7 7 0 0 1 0 10"/></svg></span>
+                        <span class="nav-label">Broadcast</span>
+                        <span class="nav-count" data-count="broadcast"></span>
+                    </button>
+                    <button type="button" class="nav-item" data-action="nav" data-view="search">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span>
+                        <span class="nav-label">Search</span>
+                        <span class="nav-count" data-count="search"></span>
+                    </button>
+                    <button type="button" class="nav-item" data-action="nav" data-view="delete">
+                        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="M6.5 7l1 13h9l1-13"/><path d="M10 11v5.5M14 11v5.5"/></svg></span>
+                        <span class="nav-label">Deletion</span>
+                        <span class="nav-count" data-count="delete"></span>
+                    </button>
+                </nav>
+                <div class="sidebar-foot">
+                    <button type="button" class="btn btn-ghost btn-small btn-block" data-action="show-shortcuts">Keyboard shortcuts</button>
+                    <a class="sidebar-link" href="index.html">View portfolio</a>
                 </div>
+            </aside>
+            <div class="sidebar-scrim" data-action="toggle-sidebar" hidden></div>
+
+            <div class="main">
+                <header class="topbar">
+                    <div class="topbar-inner">
+                        <button type="button" class="icon-btn sidebar-toggle" data-action="toggle-sidebar" aria-label="Toggle navigation">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                        </button>
+                        <div class="global-search" id="global-search-wrap">
+                            <span class="gs-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span>
+                            <input id="global-search" type="search" placeholder="Search listings, users, KYC, support…" autocomplete="off" aria-label="Search everything" aria-controls="global-search-results">
+                            <kbd class="kbd">/</kbd>
+                            <div id="global-search-results" class="gs-panel" role="listbox" hidden></div>
+                        </div>
+                        <div class="topbar-actions">
+                            <span class="sync-status" id="sync-status" role="status">Not loaded</span>
+                            <button type="button" class="icon-btn" id="theme-toggle" data-action="toggle-theme" aria-label="Switch to dark theme" title="Dark mode">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13.4A8.6 8.6 0 1 1 10.6 3.5a6.8 6.8 0 0 0 9.9 9.9Z"/></svg>
+                            </button>
+                            <button type="button" class="btn btn-ghost btn-small" data-action="refresh">Refresh</button>
+                            <span id="account-email" class="account-email"></span>
+                            <button type="button" class="btn btn-ghost btn-small" data-action="sign-out">Sign out</button>
+                        </div>
+                    </div>
+                </header>
+
+                <main class="view" id="view-root"></main>
+
+                <footer class="admin-footer">
+                    GharBato admin &middot; <a href="index.html">Portfolio</a> &middot;
+                    <a href="gharbato-privacy.html">Privacy</a>
+                </footer>
             </div>
-            <nav class="tabs" aria-label="Admin sections">
-                <button type="button" class="tab is-active" data-action="nav" data-view="overview">Overview</button>
-                <button type="button" class="tab" data-action="nav" data-view="listings">Listings</button>
-                <button type="button" class="tab" data-action="nav" data-view="reports">Reports</button>
-                <button type="button" class="tab" data-action="nav" data-view="users">Users</button>
-                <button type="button" class="tab" data-action="nav" data-view="kyc">KYC</button>
-                <button type="button" class="tab" data-action="nav" data-view="support">Support</button>
-                <button type="button" class="tab" data-action="nav" data-view="search">Search</button>
-                <button type="button" class="tab" data-action="nav" data-view="delete">Deletion</button>
-            </nav>
-        </header>
-
-        <main class="view" id="view-root"></main>
-
-        <footer class="admin-footer">
-            GharBato admin &middot; <a href="index.html">Portfolio</a> &middot;
-            <a href="gharbato-privacy.html">Privacy</a>
-        </footer>
+        </div>
 
         <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
         <div id="modal-root"></div>
     </div>
 
-    <script src="gharbato-admin-config.js?v=20261026-7"></script>
-    <script src="gharbato-admin.js?v=20261026-7"></script>
+    <script src="gharbato-admin-config.js?v=20261122-5"></script>
+    <script src="gharbato-admin.js?v=20261122-5"></script>
 </body>
 </html>

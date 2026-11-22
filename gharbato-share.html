@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared listing | GharBato</title>
+    <meta name="description" content="A property shared from GharBato, Nepal's property marketplace.">
+    <meta name="theme-color" content="#2B193D">
+    <meta property="og:site_name" content="GharBato">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Shared listing | GharBato">
+    <meta property="og:description" content="A property shared from GharBato, Nepal's property marketplace.">
+    <meta property="og:url" content="https://manjilbasnet.com.np/gharbato-share.html">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="og:image" content="https://manjilbasnet.com.np/Images/gharbato-logo.png">
+    <meta name="twitter:image" content="https://manjilbasnet.com.np/Images/gharbato-logo.png">
+    <link rel="icon" type="image/png" href="Images/gharbato-logo.png">
+    <link rel="stylesheet" href="gharbato-share.css?v=1">
+</head>
+<body>
+    <header class="share-bar">
+        <div class="share-bar__inner">
+            <a class="share-brand" href="index.html">
+                <img src="Images/gharbato-logo.png" alt="" width="34" height="34">
+                <span>GharBato</span>
+            </a>
+            <a class="share-bar__cta" href="index.html#projects">About GharBato</a>
+        </div>
+    </header>
+
+    <main class="share-main" id="share-main">
+        <div class="share-loading" id="share-loading" aria-live="polite">
+            <div class="share-skeleton share-skeleton--hero"></div>
+            <div class="share-skeleton share-skeleton--line"></div>
+            <div class="share-skeleton share-skeleton--line short"></div>
+        </div>
+
+        <div class="share-state" id="share-state" hidden aria-live="polite">
+            <h1 id="share-state-title">This listing is no longer available</h1>
+            <p id="share-state-message">It may have been rented, sold, removed by the owner, or is still waiting for review.</p>
+            <div class="share-state__actions">
+                <button type="button" class="share-button" id="share-retry" hidden>Try again</button>
+                <a class="share-button share-button--ghost" href="index.html#projects">See the GharBato project</a>
+            </div>
+        </div>
+
+        <article class="share-card" id="share-card" hidden>
+            <div class="share-gallery" id="share-gallery"></div>
+            <div class="share-body">
+                <p class="share-crumbs"><a href="index.html">Portfolio</a> / GharBato / Shared listing</p>
+                <h1 id="share-title"></h1>
+                <p class="share-price" id="share-price"></p>
+                <p class="share-subtitle" id="share-subtitle"></p>
+                <p class="share-location" id="share-location"></p>
+                <ul class="share-facts" id="share-facts"></ul>
+                <section class="share-section" id="share-description-section">
+                    <h2>About this property</h2>
+                    <div class="share-description" id="share-description"></div>
+                </section>
+                <section class="share-section" id="share-details-section">
+                    <h2>Details</h2>
+                    <dl class="share-details" id="share-details"></dl>
+                </section>
+                <section class="share-section" id="share-amenities-section">
+                    <h2>Amenities</h2>
+                    <ul class="share-amenities" id="share-amenities"></ul>
+                </section>
+                <section class="share-section" id="share-owner-section">
+                    <h2>Listed by</h2>
+                    <div class="share-owner">
+                        <span class="share-owner__avatar" id="share-owner-avatar" aria-hidden="true"></span>
+                        <div>
+                            <div class="share-owner__name" id="share-owner-name"></div>
+                            <div class="share-owner__role">Verified on GharBato</div>
+                        </div>
+                    </div>
+                </section>
+                <p class="share-updated" id="share-updated"></p>
+                <div class="share-actions" id="share-actions">
+                    <a class="share-button" id="share-open-app" href="#" hidden>Open in the app</a>
+                    <a class="share-button share-button--ghost" id="share-get-app" href="index.html#projects" hidden>Get GharBato</a>
+                    <button type="button" class="share-button share-button--quiet" id="share-copy">Copy link</button>
+                    <a class="share-button share-button--quiet" id="share-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
+                </div>
+                <p class="share-note" id="share-note"></p>
+            </div>
+        </article>
+    </main>
+
+    <footer class="share-footer">
+        <div class="share-footer__inner">
+            <span>GharBato · Nepal property marketplace</span>
+            <a href="gharbato-privacy.html">Privacy</a>
+            <a href="gharbato-delete-account.html">Account deletion</a>
+        </div>
+    </footer>
+
+    <div class="share-toast" id="share-toast" role="status" aria-live="polite" hidden>Link copied</div>
+
+    <script src="gharbato-share.js?v=1"></script>
+</body>
+</html>

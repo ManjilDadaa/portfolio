@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.gharbato.nepal.mobile",
+      "sha256_cert_fingerprints": [
+        "5A:71:E8:B6:0D:BD:A1:6A:83:39:27:7C:27:F6:17:02:BC:58:26:46:88:3F:5E:22:EF:6D:F4:76:46:50:64:F9"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.gharbato",
+      "sha256_cert_fingerprints": [
+        "24:91:15:D5:44:03:03:6D:7F:8C:BC:34:FC:17:F0:87:2C:E8:11:16:A9:0A:1C:F8:C7:31:A5:C7:AC:17:BE:88"
+      ]
+    }
+  }
+]

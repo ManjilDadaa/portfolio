@@ -54,7 +54,8 @@ function harness() {
     const source = fs.readFileSync(path.join(__dirname, '..', 'gharbato-admin.js'), 'utf8');
     vm.runInContext(source.replace(/\}\(\)\);\s*$/, `
         window.test = { state, hydrateProtectedKycImages, kycDocumentButton, openImage,
-            closeModal, signOut, handleAction, loadCore, forceRefreshToken };
+            closeModal, signOut, handleAction, loadCore, forceRefreshToken,
+            shareProjection, syncSharedProperties, publishShareEntry, unpublishShareEntry };
     }());`), context);
     window.test.state.session = { idToken: 'test-token', expiresAt: Date.now() + 3600000 };
     return { ...window.test, context, document, nodes, objects, revoked };
@@ -304,4 +305,113 @@ test('support send writes the app message schema and clears input only after suc
     await app.handleAction('send-message', button());
     assert.equal(app.nodes['#chat-input'].value, 'Keep this draft');
     assert.equal(app.nodes['[data-action="send-message"]'].disabled, false);
+});
+
+/* -------------------- Share links -------------------- */
+
+function approvedProperty(overrides = {}) {
+    return Object.assign({
+        _key: '-N1',
+        id: 11,
+        status: 'APPROVED',
+        title: 'Two bedroom flat',
+        description: 'Bright flat near the ring road',
+        price: 'Rs 25,000',
+        marketType: 'For Rent',
+        propertyType: 'Apartment',
+        location: 'Lazimpat, Kathmandu',
+        bedrooms: 2,
+        bathrooms: 2,
+        sqft: '900 sqft',
+        floor: '2nd Floor',
+        furnishing: 'Semi furnished',
+        parking: true,
+        petsAllowed: false,
+        images: {
+            cover: ['https://res.cloudinary.com/demo/image/upload/v1/cover.jpg'],
+            living: ['https://evil.example.com/x.jpg', 'http://res.cloudinary.com/demo/insecure.jpg']
+        },
+        amenities: ['Lift', 'Lift', '24h water'],
+        ownerName: 'Sita Sharma',
+        ownerImageUrl: 'https://res.cloudinary.com/demo/image/upload/v1/owner.jpg',
+        latitude: 27.717245,
+        longitude: 85.324033,
+        ownerId: 'uid-owner',
+        ownerEmail: 'owner@example.com',
+        viewerIds: { 'uid-viewer': 1 },
+        updatedAt: 1700000000000
+    }, overrides);
+}
+
+test('share projection publishes only approved, safe listing fields', () => {
+    const app = harness();
+    const projection = app.shareProjection(approvedProperty());
+    assert.equal(projection.title, 'Two bedroom flat');
+    assert.equal(projection.price, 'Rs 25,000');
+    assert.equal(projection.ownerEmail, undefined);
+    assert.equal(projection.ownerId, undefined);
+    assert.equal(projection.viewerIds, undefined);
+    // The projection is created inside the vm realm, so compare JSON, not prototypes.
+    assert.equal(JSON.stringify(projection.images),
+        JSON.stringify({ cover: ['https://res.cloudinary.com/demo/image/upload/v1/cover.jpg'] }));
+    assert.equal(JSON.stringify(projection.amenities), JSON.stringify(['Lift', '24h water']));
+    assert.equal(projection.latitude, 27.717);
+    assert.equal(projection.longitude, 85.324);
+    assert.equal(app.shareProjection(approvedProperty({ status: 'PENDING' })), null);
+    assert.equal(app.shareProjection(approvedProperty({ status: 'REJECTED' })), null);
+    assert.equal(app.shareProjection(approvedProperty({ title: '   ' })), null);
+});
+
+test('share sync writes approved listings and removes everything else', async () => {
+    const app = harness();
+    const calls = mockDatabase(app);
+    app.state.properties = {
+        '-N1': approvedProperty(),
+        '-N2': approvedProperty({ _key: '-N2', status: 'PENDING', title: 'Pending flat' })
+    };
+    app.state.shared = {
+        '-gone': { title: 'Removed flat', updatedAt: 1 }
+    };
+    const summary = await app.syncSharedProperties();
+    assert.equal(summary.written, 1);
+    assert.equal(summary.removed, 1);
+    assert.equal(summary.failed, 0);
+    const writes = calls.filter(call => call.path === 'SharedProperties/-N1');
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].method, 'PUT');
+    assert.equal(writes[0].body.title, 'Two bedroom flat');
+    assert.equal(writes[0].body.ownerEmail, undefined);
+    assert.equal(calls.filter(call => call.path === 'SharedProperties/-gone' && call.method === 'DELETE').length, 1);
+    assert.equal(calls.some(call => call.path.indexOf('SharedProperties/-N2') === 0), false);
+    assert.ok(app.state.shared['-N1']);
+    assert.equal(app.state.shared['-gone'], undefined);
+    assert.equal(app.state.shared['-N2'], undefined);
+});
+
+test('share sync skips rewriting when only the timestamp moved', async () => {
+    const app = harness();
+    const calls = mockDatabase(app);
+    const projection = app.shareProjection(approvedProperty());
+    app.state.properties = { '-N1': approvedProperty({ updatedAt: 1800000000000 }) };
+    app.state.shared = { '-N1': projection };
+    const summary = await app.syncSharedProperties();
+    assert.equal(summary.written, 0);
+    assert.equal(summary.removed, 0);
+    assert.equal(calls.length, 0);
+});
+
+test('approving a listing publishes its share link and rejecting removes it', async () => {
+    const app = harness();
+    const calls = mockDatabase(app);
+    app.state.properties = { '-N1': approvedProperty({ status: 'PENDING' }) };
+    await app.handleAction('approve-listing', button({ 'data-key': '-N1' }));
+    await confirmModal(app);
+    assert.ok(calls.some(call => call.path === 'SharedProperties/-N1' && call.method === 'PUT'));
+    assert.ok(app.state.shared['-N1']);
+
+    await app.handleAction('reject-listing', button({ 'data-key': '-N1' }));
+    app.nodes['#modal-reason'].value = 'Photos do not match the listing';
+    await confirmModal(app);
+    assert.ok(calls.some(call => call.path === 'SharedProperties/-N1' && call.method === 'DELETE'));
+    assert.equal(app.state.shared['-N1'], undefined);
 });

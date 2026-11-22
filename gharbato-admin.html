@@ -7,20 +7,7 @@
     <meta name="description" content="Private GharBato administration console.">
     <title>GharBato Admin</title>
     <link rel="icon" type="image/png" href="Images/gharbato-logo.png">
-    <script>
-        /* Apply the stored theme before first paint so there is no flash. */
-        (function () {
-            try {
-                var prefs = JSON.parse(localStorage.getItem('gharbato-admin-prefs-v1') || '{}');
-                var theme = prefs.theme || 'system';
-                var dark = theme === 'dark' || (theme !== 'light' &&
-                    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-            } catch (error) {
-                document.documentElement.setAttribute('data-theme', 'light');
-            }
-        }());
-    </script>
+    <script src="gharbato-admin-theme.js?v=20261122-5"></script>
     <link rel="stylesheet" href="gharbato-admin.css?v=20261122-5">
 </head>
 <body>
